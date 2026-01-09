@@ -1,12 +1,13 @@
 const express = require("express");
 const router = express.Router();
 
-const Cost = require("../../models/costs");
-const User = require("../../models/users");
-const Report = require("../../models/reports");
+const Cost = require("../models/cost");
+const User = require("../models/user");
+const Report = require("../models/report");
 
 const validCategories = ["food", "health", "housing", "sports", "education"];
 
+// Create a new cost entry for a user
 router.post("/add", function (req, res) {
   // Extract all parameters from the request body
   const { description, category, userid, sum, date } = req.body;
@@ -88,6 +89,7 @@ router.post("/add", function (req, res) {
     });
 });
 
+// Retrieve monthly report of costs for a user (with caching for past months)
 /*
  * COMPUTED DESIGN PATTERN IMPLEMENTATION FOR MONTHLY REPORTS
  *

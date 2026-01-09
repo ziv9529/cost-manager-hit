@@ -1,8 +1,9 @@
 const express = require("express");
 const router = express.Router();
 
-const Log = require("../../models/logs");
+const Log = require("../models/log");
 
+// Retrieve all system logs
 router.get("/logs", function (req, res) {
   try {
     // Query the database to get all logs

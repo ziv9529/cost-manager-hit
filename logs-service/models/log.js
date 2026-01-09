@@ -1,6 +1,7 @@
-const { mongoose } = require("../database/mongoose");
+const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
+// Log schema for storing system logs
 const LogsSchema = new Schema({
   userid: {
     type: Number,

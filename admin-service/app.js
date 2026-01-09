@@ -2,9 +2,9 @@ const createError = require("http-errors");
 const express = require("express");
 const path = require("path");
 const cookieParser = require("cookie-parser");
-const { connectDB } = require("../database/mongoose");
-const { saveLogToMongoDB } = require("../database/logger");
-require("dotenv").config({ path: path.join(__dirname, "../.env") });
+const { connectDB } = require("./database/mongoose");
+const { saveLogToMongoDB } = require("./database/logger");
+require("dotenv").config();
 
 const apiRouter = require("./routes/api");
 

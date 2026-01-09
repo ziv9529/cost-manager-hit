@@ -1,0 +1,441 @@
+const request = require("supertest");
+const mongoose = require("mongoose");
+const { app, connectDB } = require("../app");
+const Cost = require("../models/cost");
+const User = require("../models/user");
+const Report = require("../models/report");
+
+describe("Costs Service API", () => {
+  beforeAll(async () => {
+    // Connect to test database
+    await connectDB(process.env.MONGODB_URI);
+  });
+
+  afterEach(async () => {
+    // Clean up after each test
+    await Cost.deleteMany({});
+    await User.deleteMany({});
+    await Report.deleteMany({});
+  });
+
+  afterAll(async () => {
+    // Close database connection
+    await mongoose.connection.close();
+  });
+
+  describe("POST /api/add", () => {
+    // Test successful cost creation
+    test("should create a new cost successfully", async () => {
+      // Create a user first
+      await User.create({
+        id: 1,
+        first_name: "John",
+        last_name: "Doe",
+        birthday: new Date("1990-05-15"),
+      });
+
+      const costData = {
+        userid: 1,
+        description: "lunch",
+        category: "food",
+        sum: 25.5,
+      };
+
+      const response = await request(app).post("/api/add").send(costData);
+
+      expect(response.status).toBe(200);
+      expect(response.body.userid).toBe(1);
+      expect(response.body.description).toBe("lunch");
+      expect(response.body.category).toBe("food");
+      expect(response.body.sum).toBe(25.5);
+    });
+
+    // Test missing required fields
+    test("should return 500 when missing required fields", async () => {
+      const costData = {
+        userid: 1,
+        description: "lunch",
+        // missing category and sum
+      };
+
+      const response = await request(app).post("/api/add").send(costData);
+
+      expect(response.status).toBe(500);
+      expect(response.body.message).toContain(
+        "Missing some required parameters"
+      );
+    });
+
+    // Test invalid category
+    test("should reject invalid category", async () => {
+      // Create a user first
+      await User.create({
+        id: 1,
+        first_name: "John",
+        last_name: "Doe",
+        birthday: new Date("1990-05-15"),
+      });
+
+      const costData = {
+        userid: 1,
+        description: "lunch",
+        category: "invalid",
+        sum: 25.5,
+      };
+
+      const response = await request(app).post("/api/add").send(costData);
+
+      expect(response.status).toBe(500);
+      expect(response.body.message).toContain("invalid category invalid");
+    });
+
+    // Test with extra/malicious fields
+    test("should ignore extra/unwanted fields in request", async () => {
+      // Create a user first
+      await User.create({
+        id: 1,
+        first_name: "John",
+        last_name: "Doe",
+        birthday: new Date("1990-05-15"),
+      });
+
+      const costData = {
+        userid: 1,
+        description: "lunch",
+        category: "food",
+        sum: 25.5,
+        maliciousKey: "rm -rf /",
+        anotherWeirdField: "hack attempt",
+        randomField: "should be ignored",
+      };
+
+      const response = await request(app).post("/api/add").send(costData);
+
+      expect(response.status).toBe(200);
+      // Verify extra fields were not stored
+      expect(response.body).not.toHaveProperty("maliciousKey");
+      expect(response.body).not.toHaveProperty("anotherWeirdField");
+      expect(response.body).not.toHaveProperty("randomField");
+      // Verify only expected fields exist
+      expect(response.body.userid).toBe(1);
+      expect(response.body.description).toBe("lunch");
+    });
+
+    // Test with only half of required parameters
+    test("should reject when only userid and description provided", async () => {
+      const costData = {
+        userid: 1,
+        description: "lunch",
+        // missing category and sum
+      };
+
+      const response = await request(app).post("/api/add").send(costData);
+
+      expect(response.status).toBe(500);
+      expect(response.body.message).toContain(
+        "Missing some required parameters"
+      );
+    });
+
+    // Test with empty string values
+    test("should reject with empty string description", async () => {
+      await User.create({
+        id: 1,
+        first_name: "John",
+        last_name: "Doe",
+        birthday: new Date("1990-05-15"),
+      });
+
+      const costData = {
+        userid: 1,
+        description: "",
+        category: "food",
+        sum: 25.5,
+      };
+
+      const response = await request(app).post("/api/add").send(costData);
+
+      expect(response.status).toBe(500);
+      expect(response.body.message).toContain(
+        "Missing some required parameters"
+      );
+    });
+
+    // Test with null values
+    test("should reject with null sum", async () => {
+      await User.create({
+        id: 1,
+        first_name: "John",
+        last_name: "Doe",
+        birthday: new Date("1990-05-15"),
+      });
+
+      const costData = {
+        userid: 1,
+        description: "lunch",
+        category: "food",
+        sum: null,
+      };
+
+      const response = await request(app).post("/api/add").send(costData);
+
+      expect(response.status).toBe(500);
+      expect(response.body.message).toContain(
+        "Missing some required parameters"
+      );
+    });
+
+    // Test with zero sum (falsy value, should be rejected)
+    test("should reject cost with zero sum (falsy value)", async () => {
+      await User.create({
+        id: 1,
+        first_name: "John",
+        last_name: "Doe",
+        birthday: new Date("1990-05-15"),
+      });
+
+      const costData = {
+        userid: 1,
+        description: "free item",
+        category: "food",
+        sum: 0,
+      };
+
+      const response = await request(app).post("/api/add").send(costData);
+
+      expect(response.status).toBe(500);
+      expect(response.body.message).toContain(
+        "Missing some required parameters"
+      );
+    });
+
+    // Test with very large sum
+    test("should accept cost with large sum value", async () => {
+      await User.create({
+        id: 1,
+        first_name: "John",
+        last_name: "Doe",
+        birthday: new Date("1990-05-15"),
+      });
+
+      const costData = {
+        userid: 1,
+        description: "expensive item",
+        category: "housing",
+        sum: 999999.99,
+      };
+
+      const response = await request(app).post("/api/add").send(costData);
+
+      expect(response.status).toBe(200);
+      expect(response.body.sum).toBe(999999.99);
+    });
+
+    // Test with string userid instead of number
+    test("should handle string userid gracefully", async () => {
+      const costData = {
+        userid: "notanumber",
+        description: "lunch",
+        category: "food",
+        sum: 25.5,
+      };
+
+      const response = await request(app).post("/api/add").send(costData);
+
+      // Should fail because user won't be found
+      expect(response.status).toBe(500);
+    });
+
+    // Test non-existent user
+    test("should reject cost for non-existent user", async () => {
+      const costData = {
+        userid: 999,
+        description: "lunch",
+        category: "food",
+        sum: 25.5,
+      };
+
+      const response = await request(app).post("/api/add").send(costData);
+
+      expect(response.status).toBe(500);
+      expect(response.body.message).toContain("User not found");
+    });
+
+    // Test past date rejection
+    test("should reject past month dates", async () => {
+      // Create a user first
+      await User.create({
+        id: 1,
+        first_name: "John",
+        last_name: "Doe",
+        birthday: new Date("1990-05-15"),
+      });
+
+      const pastDate = new Date();
+      pastDate.setMonth(pastDate.getMonth() - 1);
+
+      const costData = {
+        userid: 1,
+        description: "lunch",
+        category: "food",
+        sum: 25.5,
+        date: pastDate.toISOString().split("T")[0],
+      };
+
+      const response = await request(app).post("/api/add").send(costData);
+
+      expect(response.status).toBe(500);
+      expect(response.body.message).toContain(
+        "Can't add cost with a past date"
+      );
+    });
+  });
+
+  describe("GET /api/report", () => {
+    // Test monthly report generation
+    test("should return monthly report for current month", async () => {
+      // Create a user
+      await User.create({
+        id: 1,
+        first_name: "John",
+        last_name: "Doe",
+        birthday: new Date("1990-05-15"),
+      });
+
+      // Create costs for current month
+      const today = new Date();
+      await Cost.create({
+        userid: 1,
+        description: "lunch",
+        category: "food",
+        sum: 25.5,
+        date: new Date(today.getFullYear(), today.getMonth(), 15),
+      });
+      await Cost.create({
+        userid: 1,
+        description: "book",
+        category: "education",
+        sum: 50,
+        date: new Date(today.getFullYear(), today.getMonth(), 20),
+      });
+
+      const response = await request(app).get(
+        `/api/report?id=1&year=${today.getFullYear()}&month=${
+          today.getMonth() + 1
+        }`
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.body.userid).toBe(1);
+      expect(response.body.costs).toBeDefined();
+      expect(response.body.costs.length).toBeGreaterThan(0);
+    });
+
+    // Test missing parameters
+    test("should return 500 when missing parameters", async () => {
+      const response = await request(app).get("/api/report?id=1");
+
+      expect(response.status).toBe(500);
+      expect(response.body.message).toContain("Missing required parameters");
+    });
+
+    // Test invalid month
+    test("should return 500 for invalid month", async () => {
+      const response = await request(app).get(
+        "/api/report?id=1&year=2026&month=13"
+      );
+
+      expect(response.status).toBe(500);
+      expect(response.body.message).toContain("Month must be between 1 and 12");
+    });
+
+    // Test past month report caching (Computed Design Pattern)
+    test("should cache and reuse past month reports", async () => {
+      // Create a user
+      await User.create({
+        id: 1,
+        first_name: "John",
+        last_name: "Doe",
+        birthday: new Date("1990-05-15"),
+      });
+
+      // Add a cost from last month
+      const lastMonth = new Date();
+      lastMonth.setMonth(lastMonth.getMonth() - 1);
+      const costDate = lastMonth.toISOString().split("T")[0];
+
+      await Cost.create({
+        userid: 1,
+        description: "groceries",
+        category: "food",
+        sum: 50.0,
+        date: new Date(costDate),
+      });
+
+      // Request report for past month (should compute and cache)
+      const year = lastMonth.getFullYear();
+      const month = lastMonth.getMonth() + 1;
+
+      const response1 = await request(app).get(
+        `/api/report?id=1&year=${year}&month=${month}`
+      );
+
+      expect(response1.status).toBe(200);
+      expect(response1.body.costs).toBeDefined();
+      expect(response1.body.costs.length).toBeGreaterThan(0);
+
+      // Request same report again (should use cache)
+      const response2 = await request(app).get(
+        `/api/report?id=1&year=${year}&month=${month}`
+      );
+
+      expect(response2.status).toBe(200);
+      // Both requests should return same data (from cache)
+      expect(JSON.stringify(response1.body)).toBe(
+        JSON.stringify(response2.body)
+      );
+    });
+
+    // Test that current month reports are computed fresh (not cached)
+    test("should compute current month reports in real-time (no caching)", async () => {
+      // Create a user
+      await User.create({
+        id: 1,
+        first_name: "Jane",
+        last_name: "Smith",
+        birthday: new Date("1995-03-20"),
+      });
+
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+
+      // First request for current month
+      const response1 = await request(app).get(
+        `/api/report?id=1&year=${year}&month=${month}`
+      );
+
+      expect(response1.status).toBe(200);
+      expect(response1.body.costs).toBeDefined();
+
+      // Add a cost for current month
+      await Cost.create({
+        userid: 1,
+        description: "lunch",
+        category: "food",
+        sum: 15.0,
+        date: now,
+      });
+
+      // Second request for current month should also succeed
+      const response2 = await request(app).get(
+        `/api/report?id=1&year=${year}&month=${month}`
+      );
+
+      expect(response2.status).toBe(200);
+      expect(response2.body.costs).toBeDefined();
+      // Verify both responses have the same structure (5 categories)
+      expect(response2.body.costs.length).toBe(5);
+    });
+  });
+});

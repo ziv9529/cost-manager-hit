@@ -9,7 +9,13 @@
     "start:users": "cd users-service && npm start",
     "start:costs": "cd costs-service && npm start",
     "start:logs": "cd logs-service && npm start",
-    "start:admin": "cd admin-service && npm start"
+    "start:admin": "cd admin-service && npm start",
+    "test": "npm run test:all",
+    "test:all": "concurrently --names \"USERS,COSTS,LOGS,ADMIN\" --prefix-colors \"blue,green,yellow,magenta\" --kill-others-on-exit \"npm run test:users\" \"npm run test:costs\" \"npm run test:logs\" \"npm run test:admin\"",
+    "test:users": "cd users-service && npm test",
+    "test:costs": "cd costs-service && npm test",
+    "test:logs": "cd logs-service && npm test",
+    "test:admin": "cd admin-service && npm test"
   },
   "dependencies": {
     "mongoose": "^9.1.1",

@@ -1,4 +1,4 @@
-const { mongoose } = require("../database/mongoose");
+const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 // Schema for storing computed monthly reports (Computed Design Pattern)

@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
+// Retrieve developer team information
 router.get("/about", function (req, res) {
   try {
     // Create the developers team (first + last name) in the JSON format
