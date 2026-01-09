@@ -1,140 +1,294 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-const Cost = require('../models/costs');
-const User = require('../models/users');
+const Cost = require("../../models/costs");
+const User = require("../../models/users");
+const Report = require("../../models/reports");
 
-const validCategories = ['food', 'health', 'housing', 'sports', 'education'];
+const validCategories = ["food", "health", "housing", "sports", "education"];
 
-router.post('/add', function (req, res) {
-    // Extract all parameters from the request body
-    const {description, category, userid, sum, date} = req.body;
+router.post("/add", function (req, res) {
+  // Extract all parameters from the request body
+  const { description, category, userid, sum, date } = req.body;
 
-    // Validation: Check if any required field is missing from the request body
-    if(!description || !category || !userid || !sum) {
-        return res.status(500).json({id: userid, message: "Missing some required parameters (description, category, userid, sum)" });
+  // Validation: Check if any required field is missing from the request body
+  if (!description || !category || !userid || !sum) {
+    return res.status(500).json({
+      id: userid,
+      message:
+        "Missing some required parameters (description, category, userid, sum)",
+    });
+  }
+
+  // Validation: Ensure the 'sum' parameter is not a negative number
+  if (sum < 0) {
+    return res
+      .status(500)
+      .json({ id: userid, message: "Sum can't be negative number" });
+  }
+
+  // Validation: Verify if the provided category is in the valid categories
+  if (!validCategories.includes(category)) {
+    return res
+      .status(500)
+      .json({ id: userid, message: `${category} category invalid` });
+  }
+
+  // Get the current date
+  const nowDate = new Date();
+  let costDate;
+
+  // Check if the user provided a specific date in the request
+  // If a date is provided, validate and use it; otherwise, default to the current date
+  if (date) {
+    costDate = new Date(date);
+
+    // Check if the provided date is in the past by comparing the year and the month
+    const isPastYear = costDate.getFullYear() < nowDate.getFullYear();
+    const isPastMonth =
+      costDate.getFullYear() === nowDate.getFullYear() &&
+      costDate.getMonth() < nowDate.getMonth();
+
+    // Reject the request if the date is in a past month or year
+    // This ensures costs can only be added for current or future months
+    if (isPastYear || isPastMonth) {
+      return res
+        .status(500)
+        .json({ id: userid, message: "Can't add cost with a past date" });
     }
+  } else {
+    // No date provided, use current date as default
+    costDate = nowDate;
+  }
 
-    // Validation: Ensure the 'sum' parameter is not a negative number
-    if(sum < 0){
-        return res.status(500).json({id: userid, message: "Sum can't be negative number" });
-    }
+  // Query the database to verify that the user exists before adding the cost
+  User.findOne({ id: userid })
+    .then((userExists) => {
+      // If the user is not found, throw an error to skip to the catch block
+      if (!userExists) {
+        throw new Error("User not found");
+      }
 
-    // Validation: Verify if the provided category is in the valid categories
-    if(!validCategories.includes(category)) {
-        return res.status(500).json({id: userid, message: `${category} category invalid` });
-    }
+      // Create a new cost document in the database with the validated date (that we checked before)
+      return Cost.create({
+        description,
+        category,
+        userid,
+        sum,
+        date: costDate,
+      });
+    })
+    .then((cost) => {
+      // If creation is successful, send the created cost object back to the client
+      res.status(200).send(cost);
+    })
+    .catch((error) => {
+      // Catch any errors (user find failed or others) and return a 500 error
+      res.status(500).json({ id: userid, message: error.message });
+    });
+});
 
-    // Get the current date
-    const nowDate = new Date();
-    let costDate;
+/*
+ * COMPUTED DESIGN PATTERN IMPLEMENTATION FOR MONTHLY REPORTS
+ *
+ * This endpoint implements the Computed Design Pattern for generating monthly cost reports.
+ * The pattern optimizes performance by caching computed reports for past months.
+ *
+ * How it works:
+ * 1. When a report is requested for a PAST month:
+ *    - First check if a pre-computed report exists in the reports collection
+ *    - If found, return the cached report immediately (fast response)
+ *    - If not found, compute the report, save it to reports collection, then return it
+ *    - Future requests for the same past month will use the cached version
+ *
+ * 2. When a report is requested for CURRENT or FUTURE month:
+ *    - Always compute the report in real-time (never cache)
+ *    - This ensures the report reflects any new costs added in the current month
+ *
+ * Benefits:
+ * - Fast retrieval for historical data (cached reports)
+ * - Always accurate for current month (real-time computation)
+ * - Reduced database load for frequently requested past months
+ * - No stale data issues since past months cannot have new costs added
+ *
+ * The computed report groups all costs by category and formats them according to
+ * the specification, ensuring all 5 categories are present even if empty.
+ */
+router.get("/report", function (req, res) {
+  // Extract query parameters: id, year, and month
+  const { id, year, month } = req.query;
 
-    // Check if the user provided a specific date in the request
-    // If a date is provided, validate and use it; otherwise, default to the current date
-    if (date) {
-        costDate = new Date(date);
+  // Validation: Check if any required parameter is missing
+  if (!id || !year || !month) {
+    return res.status(500).json({
+      id: id,
+      message: "Missing required parameters (id, year, month)",
+    });
+  }
 
-        //Check if the provided date is in the past by comparing the year and the month
-        const isPastYear = costDate.getFullYear() < nowDate.getFullYear(); //check if the year in the request is in the past
-        const isPastMonth = (costDate.getFullYear() === nowDate.getFullYear()) &&
-            (costDate.getMonth() < nowDate.getMonth());
+  // Convert parameters to numbers for comparison and database queries
+  const userid = Number(id);
+  const requestYear = Number(year);
+  const requestMonth = Number(month);
 
-        // Reject the request if the date is in a past month or year
-        if (isPastYear || isPastMonth) {
-            //throw new Error("Can't add cost with a past date");
-            return res.status(500).json({id: userid, message: "Can't add cost with a past date"});
+  // Validation: Ensure month is between 1-12
+  if (requestMonth < 1 || requestMonth > 12) {
+    return res.status(500).json({
+      id: userid,
+      message: "Month must be between 1 and 12",
+    });
+  }
+
+  // Get current date to determine if requested month is in the past
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
+
+  // Check if the requested month is in the past
+  const isPastMonth =
+    requestYear < currentYear ||
+    (requestYear === currentYear && requestMonth < currentMonth);
+
+  /*
+   * If the requested month is in the PAST, check if we have a cached report.
+   * This implements the Computed Design Pattern - we only cache past months
+   * because they cannot have new costs added (server prevents past dates).
+   */
+  if (isPastMonth) {
+    // Try to find an existing cached report for this user, year, and month
+    Report.findOne({ userid: userid, year: requestYear, month: requestMonth })
+      .then((existingReport) => {
+        // If cached report exists, return it immediately
+        if (existingReport) {
+          return res.status(200).json({
+            userid: existingReport.userid,
+            year: existingReport.year,
+            month: existingReport.month,
+            costs: existingReport.costs,
+          });
         }
-    } else {
-        costDate = nowDate;
-    }
 
-    // Query the database to verify that the user exists before adding the cost
-    User.findOne({id: userid})
-        .then(userExists => {
-            // If the user is not found, throw an error to skip to the catch block
-            if (!userExists) {
-                throw new Error('User not found');
-            }
-
-            // Create a new cost document in the database with the validated date (that we checked before)
-            return Cost.create({
-                description,
-                category,
-                userid,
-                sum,
-                date: costDate
-            });
-        })
-        .then(cost => {
-            // If creation is successful, send the created cost object back to the client
-            res.status(200).send(cost);
-        })
-        .catch(error => {
-            // Catch any errors (user find failed or others) and return a 500 error
-            res.status(500).json({id: userid, message: error.message});
-        })
-
+        // No cached report found, compute it and save for future requests
+        return computeAndSaveReport(userid, requestYear, requestMonth, res);
+      })
+      .catch((error) => {
+        // Handle database errors
+        res.status(500).json({ id: userid, message: error.message });
+      });
+  } else {
+    /*
+     * For CURRENT or FUTURE months, always compute in real-time.
+     * We don't cache these because costs can still be added to current/future months.
+     */
+    computeReport(userid, requestYear, requestMonth, res);
+  }
 });
 
-router.get('/about', function (req, res) {
+/*
+ * Helper function to compute a monthly report in real-time.
+ * This function queries all costs for the specified user, year, and month,
+ * then groups them by category and formats the response.
+ */
+function computeReport(userid, year, month, res) {
+  // Create date range for the requested month
+  // Month in JavaScript Date is 0-indexed, so subtract 1
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0, 23, 59, 59, 999); // Last day of month
 
-    try{
-        // Create the developers team (first + last name) in the JSON format
-        const developersTeam = [
-            {
-                // First Developer
-                first_name: "Lior",
-                last_name: "Halaby"
-            },
-            {
-                // Second Developer
-                first_name: "Ziv",
-                last_name: "Ashkenazi"
-            }
-        ]
-    } catch (error) {
-        // Catch any errors and return a 500 error
-        res.status(500).json({id: userid, message: error.message});
-    }
+  // Query all costs for this user within the specified month
+  Cost.find({
+    userid: userid,
+    date: { $gte: startDate, $lte: endDate },
+  })
+    .then((costs) => {
+      // Format the costs into the required response structure
+      const formattedReport = formatReport(userid, year, month, costs);
+      res.status(200).json(formattedReport);
+    })
+    .catch((error) => {
+      // Handle database query errors
+      res.status(500).json({ id: userid, message: error.message });
+    });
+}
 
-    // Sent the developers team to the client
-    res.status(200).send(developersTeam);
-});
+/*
+ * Helper function to compute a monthly report and save it to the database.
+ * This is used for past months to implement caching (Computed Design Pattern).
+ */
+function computeAndSaveReport(userid, year, month, res) {
+  // Create date range for the requested month
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0, 23, 59, 59, 999);
 
-/*router.post('/addUser', function (req, res) {
+  // Query all costs for this user within the specified month
+  Cost.find({
+    userid: userid,
+    date: { $gte: startDate, $lte: endDate },
+  })
+    .then((costs) => {
+      // Format the costs into the required response structure
+      const formattedReport = formatReport(userid, year, month, costs);
 
-    const {id,first_name, last_name, birthday} = req.body;
-    const userBirthday = new Date(birthday);
+      // Save the computed report to the reports collection for future requests
+      return Report.create({
+        userid: userid,
+        year: year,
+        month: month,
+        costs: formattedReport.costs,
+      }).then(() => {
+        // Return the computed report to the client
+        res.status(200).json(formattedReport);
+      });
+    })
+    .catch((error) => {
+      // Handle database errors (query or save)
+      res.status(500).json({ id: userid, message: error.message });
+    });
+}
 
-    if(!id || !first_name || !last_name || !birthday){
-        return res.status(500).json({id: id, message: "Missing some required parameters (id, first_name, last_name, birthday)" });
-    }
+/*
+ * Helper function to format costs into the required report structure.
+ * Groups costs by category and ensures all 5 categories are present.
+ */
+function formatReport(userid, year, month, costs) {
+  // Initialize an object to group costs by category
+  const categorizedCosts = {
+    food: [],
+    health: [],
+    housing: [],
+    sports: [],
+    education: [],
+  };
 
-    if(userBirthday > new Date()){
-        return res.status(500).json({id: id, message: "Birthday date can't be in the future" });
-    }
+  // Group each cost by its category
+  costs.forEach((cost) => {
+    // Extract the day of the month from the cost date
+    const day = cost.date.getDate();
 
-    User.findOne({id: id})
-        .then((userExists) => {
-            if (userExists) {
-                // If the user is found (means user already exists), throw an error to skip to the catch block
-                throw new Error('User already exists');
-            }
+    // Add the cost to the appropriate category array
+    categorizedCosts[cost.category].push({
+      sum: cost.sum,
+      description: cost.description,
+      day: day,
+    });
+  });
 
-            return User.create({
-                id,
-                first_name,
-                last_name,
-                birthday: userBirthday
-            });
-        })
-        .then(user => {
-            // If creation is successful, send the created user object back to the client
-            res.status(200).send(user);
-        }).catch(error => {
-            // Catch any errors (user find failed or others) and return a 500 error
-            res.status(500).json({id: id, message: error.message});
-        })
-});*/
+  // Format the response to match the required structure
+  // Each category is wrapped in its own object within the costs array
+  const formattedCosts = [
+    { food: categorizedCosts.food },
+    { education: categorizedCosts.education },
+    { health: categorizedCosts.health },
+    { housing: categorizedCosts.housing },
+    { sports: categorizedCosts.sports },
+  ];
+
+  return {
+    userid: userid,
+    year: year,
+    month: month,
+    costs: formattedCosts,
+  };
+}
 
 module.exports = router;

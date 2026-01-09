@@ -1,5 +1,22 @@
 {
+  "name": "cost-manager-microservices",
+  "version": "1.0.0",
+  "description": "Cost Manager RESTful Web Services",
+  "private": true,
+  "scripts": {
+    "start": "npm run start:all",
+    "start:all": "concurrently --names \"USERS,COSTS,LOGS,ADMIN\" --prefix-colors \"blue,green,yellow,magenta\" \"npm run start:users\" \"npm run start:costs\" \"npm run start:logs\" \"npm run start:admin\"",
+    "start:users": "cd users-service && npm start",
+    "start:costs": "cd costs-service && npm start",
+    "start:logs": "cd logs-service && npm start",
+    "start:admin": "cd admin-service && npm start"
+  },
   "dependencies": {
-    "mongoose": "^9.1.1"
+    "mongoose": "^9.1.1",
+    "pino": "^10.1.0",
+    "pino-http": "^11.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   }
 }
