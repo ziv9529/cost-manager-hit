@@ -177,7 +177,7 @@ router.get("/report", function (req, res) {
         }
 
         // No cached report found, compute it and save for future requests
-        return computeAndSaveReport(userid, requestYear, requestMonth, res);
+        return compute(userid, requestYear, requestMonth, res, true);
       })
       .catch((error) => {
         // Handle database errors
@@ -188,16 +188,22 @@ router.get("/report", function (req, res) {
      * For CURRENT or FUTURE months, always compute in real-time.
      * We don't cache these because costs can still be added to current/future months.
      */
-    computeReport(userid, requestYear, requestMonth, res);
+    compute(userid, requestYear, requestMonth, res, false);
   }
 });
 
 /*
- * Helper function to compute a monthly report in real-time.
+ * Helper function to compute a monthly report.
  * This function queries all costs for the specified user, year, and month,
  * then groups them by category and formats the response.
+ *
+ * @param {number} userid - The user ID
+ * @param {number} year - The year for the report
+ * @param {number} month - The month for the report
+ * @param {object} res - The HTTP response object
+ * @param {boolean} shouldSave - Whether to save the computed report to the database
  */
-function computeReport(userid, year, month, res) {
+function compute(userid, year, month, res, shouldSave = false) {
   // Create date range for the requested month
   // Month in JavaScript Date is 0-indexed, so subtract 1
   const startDate = new Date(year, month - 1, 1);
@@ -211,42 +217,22 @@ function computeReport(userid, year, month, res) {
     .then((costs) => {
       // Format the costs into the required response structure
       const formattedReport = formatReport(userid, year, month, costs);
-      res.status(200).json(formattedReport);
-    })
-    .catch((error) => {
-      // Handle database query errors
-      res.status(500).json({ id: userid, message: error.message });
-    });
-}
 
-/*
- * Helper function to compute a monthly report and save it to the database.
- * This is used for past months to implement caching (Computed Design Pattern).
- */
-function computeAndSaveReport(userid, year, month, res) {
-  // Create date range for the requested month
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0, 23, 59, 59, 999);
-
-  // Query all costs for this user within the specified month
-  Cost.find({
-    userid: userid,
-    date: { $gte: startDate, $lte: endDate },
-  })
-    .then((costs) => {
-      // Format the costs into the required response structure
-      const formattedReport = formatReport(userid, year, month, costs);
-
-      // Save the computed report to the reports collection for future requests
-      return Report.create({
-        userid: userid,
-        year: year,
-        month: month,
-        costs: formattedReport.costs,
-      }).then(() => {
-        // Return the computed report to the client
+      // If shouldSave is true, save the computed report to the reports collection
+      if (shouldSave) {
+        return Report.create({
+          userid: userid,
+          year: year,
+          month: month,
+          costs: formattedReport.costs,
+        }).then(() => {
+          // Return the computed report to the client
+          res.status(200).json(formattedReport);
+        });
+      } else {
+        // Just return the report without saving
         res.status(200).json(formattedReport);
-      });
+      }
     })
     .catch((error) => {
       // Handle database errors (query or save)

@@ -462,5 +462,98 @@ describe("Costs Service API", () => {
       // Verify both responses have the same structure (5 categories)
       expect(response2.body.costs.length).toBe(5);
     });
+
+    // Test that past month reports ARE saved to database (Computed Design Pattern)
+    test("should save past month reports to database for caching", async () => {
+      const userId = testIdCounter++;
+      // Create a user
+      await User.create({
+        id: userId,
+        first_name: "John",
+        last_name: "Doe",
+        birthday: new Date("1990-05-15"),
+      });
+
+      // Add a cost from last month
+      const lastMonth = new Date();
+      lastMonth.setMonth(lastMonth.getMonth() - 1);
+
+      await Cost.create({
+        userid: userId,
+        description: "groceries",
+        category: "food",
+        sum: 50.0,
+        date: lastMonth,
+      });
+
+      // Verify no cached report exists yet
+      const year = lastMonth.getFullYear();
+      const month = lastMonth.getMonth() + 1;
+      let cachedReport = await Report.findOne({
+        userid: userId,
+        year: year,
+        month: month,
+      });
+      expect(cachedReport).toBeNull();
+
+      // Request report for past month
+      const response = await request(app).get(
+        `/api/report?id=${userId}&year=${year}&month=${month}`
+      );
+
+      expect(response.status).toBe(200);
+
+      // Verify report was now saved to database
+      cachedReport = await Report.findOne({
+        userid: userId,
+        year: year,
+        month: month,
+      });
+      expect(cachedReport).not.toBeNull();
+      expect(cachedReport.userid).toBe(userId);
+      expect(cachedReport.year).toBe(year);
+      expect(cachedReport.month).toBe(month);
+      expect(cachedReport.costs).toBeDefined();
+    });
+
+    // Test that current month reports are NOT saved to database
+    test("should NOT save current month reports to database", async () => {
+      const userId = testIdCounter++;
+      // Create a user
+      await User.create({
+        id: userId,
+        first_name: "Jane",
+        last_name: "Smith",
+        birthday: new Date("1995-03-20"),
+      });
+
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+
+      // Add a cost for current month
+      await Cost.create({
+        userid: userId,
+        description: "lunch",
+        category: "food",
+        sum: 15.0,
+        date: now,
+      });
+
+      // Request report for current month
+      const response = await request(app).get(
+        `/api/report?id=${userId}&year=${year}&month=${month}`
+      );
+
+      expect(response.status).toBe(200);
+
+      // Verify report was NOT saved to database
+      const cachedReport = await Report.findOne({
+        userid: userId,
+        year: year,
+        month: month,
+      });
+      expect(cachedReport).toBeNull();
+    });
   });
 });
