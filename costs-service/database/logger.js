@@ -20,7 +20,7 @@ const saveLogToMongoDB = async (logData) => {
     await Log.create({
       userid: userid,
       action: logData.action,
-      details: JSON.stringify(logData.details || {}),
+      details: logData.details || {},
     });
   } catch (error) {
     // Silently handle logging errors to prevent test suite interruption
