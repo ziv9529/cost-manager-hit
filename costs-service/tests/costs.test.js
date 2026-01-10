@@ -7,7 +7,7 @@ const Report = require("../models/report");
 
 describe("Costs Service API", () => {
   let testIdCounter = 1; // Counter for unique test IDs
-  
+
   beforeAll(async () => {
     // Connect to test database
     await connectDB(process.env.MONGODB_URI);
@@ -26,7 +26,7 @@ describe("Costs Service API", () => {
     await User.deleteMany({});
     await Report.deleteMany({});
     // Small delay to ensure cleanup completes
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise((resolve) => setTimeout(resolve, 200));
   });
 
   afterAll(async () => {
@@ -45,7 +45,7 @@ describe("Costs Service API", () => {
         last_name: "Doe",
         birthday: new Date("1990-05-15"),
       });
-      
+
       // Verify user was created
       expect(user.id).toBe(userId);
 

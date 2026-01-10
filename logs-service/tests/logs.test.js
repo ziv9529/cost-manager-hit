@@ -18,7 +18,7 @@ describe("Logs Service API", () => {
     // Clean up after each test
     await Log.deleteMany({});
     // Small delay to ensure cleanup completes
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   });
 
   afterAll(async () => {
@@ -47,8 +47,12 @@ describe("Logs Service API", () => {
       // The middleware will log the GET /api/logs request itself, so we expect at least 2
       expect(response.body.length).toBeGreaterThanOrEqual(2);
       // Find our specific logs
-      const log1 = response.body.find(log => log.userid === 1 && log.action === "POST /api/add");
-      const log2 = response.body.find(log => log.userid === 2 && log.action === "GET /api/users");
+      const log1 = response.body.find(
+        (log) => log.userid === 1 && log.action === "POST /api/add"
+      );
+      const log2 = response.body.find(
+        (log) => log.userid === 2 && log.action === "GET /api/users"
+      );
       expect(log1).toBeDefined();
       expect(log2).toBeDefined();
     });
@@ -95,8 +99,12 @@ describe("Logs Service API", () => {
       expect(response.status).toBe(200);
       expect(response.body.length).toBeGreaterThanOrEqual(2);
       // Find our specific logs and verify they exist
-      const foundLog1 = response.body.find(log => log.userid === 1 && log.action === "POST /api/add");
-      const foundLog2 = response.body.find(log => log.userid === 2 && log.action === "GET /api/users");
+      const foundLog1 = response.body.find(
+        (log) => log.userid === 1 && log.action === "POST /api/add"
+      );
+      const foundLog2 = response.body.find(
+        (log) => log.userid === 2 && log.action === "GET /api/users"
+      );
       expect(foundLog1).toBeDefined();
       expect(foundLog2).toBeDefined();
     });
@@ -161,7 +169,9 @@ describe("Logs Service API", () => {
 
       expect(response.status).toBe(200);
       // Find the log with empty details (may not be first due to middleware logging)
-      const emptyLog = response.body.find(log => log.action === "GET /api/logs" && log.userid === 1);
+      const emptyLog = response.body.find(
+        (log) => log.action === "GET /api/logs" && log.userid === 1
+      );
       expect(emptyLog).toBeDefined();
       expect(emptyLog.details).toBe("");
     });
@@ -206,7 +216,7 @@ describe("Logs Service API", () => {
 
       expect(response.status).toBe(200);
       // Find the log with negative userid
-      const negativeLog = response.body.find(log => log.userid === -1);
+      const negativeLog = response.body.find((log) => log.userid === -1);
       expect(negativeLog).toBeDefined();
       expect(negativeLog.userid).toBe(-1);
     });

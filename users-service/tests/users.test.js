@@ -5,7 +5,7 @@ const User = require("../models/user");
 
 describe("Users Service API", () => {
   let testIdCounter = 1; // Counter for unique test IDs
-  
+
   beforeAll(async () => {
     // Connect to test database
     await connectDB(process.env.MONGODB_URI);
@@ -21,7 +21,7 @@ describe("Users Service API", () => {
     // Clean up after each test
     await User.deleteMany({});
     // Small delay to ensure cleanup completes
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise((resolve) => setTimeout(resolve, 200));
   });
 
   afterAll(async () => {
