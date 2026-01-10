@@ -44,7 +44,10 @@ router.post("/add", function (req, res) {
     })
     .then((user) => {
       // If creation is successful, send the created user object back to the client
-      res.status(200).send(user);
+      // Convert to plain object and exclude _id field
+      const userObj = user.toObject();
+      delete userObj._id;
+      res.status(200).send(userObj);
     })
     .catch((error) => {
       // Catch any errors (user find failed or others) and return a 500 error
@@ -57,8 +60,13 @@ router.get("/users", function (req, res) {
     // Query the database to get all users
     User.find({})
       .then((users) => {
-        // Send the list of users back to the client
-        res.status(200).send(users);
+        // Send the list of users back to the client (exclude _id field)
+        const usersWithoutId = users.map((user) => {
+          const userObj = user.toObject();
+          delete userObj._id;
+          return userObj;
+        });
+        res.status(200).send(usersWithoutId);
       })
       .catch((error) => {
         // Catch any errors and return a 500 error

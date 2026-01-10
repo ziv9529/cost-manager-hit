@@ -81,7 +81,10 @@ router.post("/add", function (req, res) {
     })
     .then((cost) => {
       // If creation is successful, send the created cost object back to the client
-      res.status(200).send(cost);
+      // Convert to plain object and exclude _id field
+      const costObj = cost.toObject();
+      delete costObj._id;
+      res.status(200).send(costObj);
     })
     .catch((error) => {
       // Catch any errors (user find failed or others) and return a 500 error
