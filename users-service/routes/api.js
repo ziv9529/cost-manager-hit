@@ -10,7 +10,7 @@ router.post("/add", function (req, res) {
 
   // Validation: Check if any required field is missing from the request body
   if (!id || !first_name || !last_name || !birthday) {
-    return res.status(500).json({
+    return res.status(400).json({
       id: id,
       message:
         "Missing some required parameters (id, first_name, last_name, birthday)",
@@ -22,7 +22,7 @@ router.post("/add", function (req, res) {
   // Validation: Ensure the birthday is not in the future
   if (userBirthday > new Date()) {
     return res
-      .status(500)
+      .status(400)
       .json({ id: id, message: "Birthday date can't be in the future" });
   }
 
@@ -31,7 +31,9 @@ router.post("/add", function (req, res) {
     .then((userExists) => {
       // If the user is found, throw an error to skip to the catch block
       if (userExists) {
-        throw new Error("User already exists");
+        const error = new Error("User already exists");
+        error.statusCode = 409;
+        throw error;
       }
 
       // Create a new user document in the database
@@ -50,8 +52,9 @@ router.post("/add", function (req, res) {
       res.status(200).send(userObj);
     })
     .catch((error) => {
-      // Catch any errors (user find failed or others) and return a 500 error
-      res.status(500).json({ id: id, message: error.message });
+      // Catch any errors (user find failed or others) and return appropriate status
+      const statusCode = error.statusCode || 500;
+      res.status(statusCode).json({ id: id, message: error.message });
     });
 });
 
@@ -88,7 +91,9 @@ router.get("/users/:id", function (req, res) {
     .then((user) => {
       // If the user is not found, throw an error to skip to the catch block
       if (!user) {
-        throw new Error("User not found");
+        const error = new Error("User not found");
+        error.statusCode = 404;
+        throw error;
       }
 
       // Send the user details back to the client
@@ -100,8 +105,9 @@ router.get("/users/:id", function (req, res) {
       });
     })
     .catch((error) => {
-      // Catch any errors and return a 500 error with id and message
-      res.status(500).json({ id: id, message: error.message });
+      // Catch any errors and return appropriate status code with id and message
+      const statusCode = error.statusCode || 500;
+      res.status(statusCode).json({ id: id, message: error.message });
     });
 });
 

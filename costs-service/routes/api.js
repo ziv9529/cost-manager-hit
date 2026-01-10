@@ -14,7 +14,7 @@ router.post("/add", function (req, res) {
 
   // Validation: Check if any required field is missing from the request body
   if (!description || !category || !userid || !sum) {
-    return res.status(500).json({
+    return res.status(400).json({
       id: userid,
       message:
         "Missing some required parameters (description, category, userid, sum)",
@@ -24,14 +24,14 @@ router.post("/add", function (req, res) {
   // Validation: Ensure the 'sum' parameter is not a negative number
   if (sum < 0) {
     return res
-      .status(500)
+      .status(400)
       .json({ id: userid, message: "Sum can't be negative number" });
   }
 
   // Validation: Verify if the provided category is in the valid categories
   if (!validCategories.includes(category)) {
     return res
-      .status(500)
+      .status(400)
       .json({ id: userid, message: `${category} category invalid` });
   }
 
@@ -54,7 +54,7 @@ router.post("/add", function (req, res) {
     // This ensures costs can only be added for current or future months
     if (isPastYear || isPastMonth) {
       return res
-        .status(500)
+        .status(400)
         .json({ id: userid, message: "Can't add cost with a past date" });
     }
   } else {
@@ -67,7 +67,9 @@ router.post("/add", function (req, res) {
     .then((userExists) => {
       // If the user is not found, throw an error to skip to the catch block
       if (!userExists) {
-        throw new Error("User not found");
+        const error = new Error("User not found");
+        error.statusCode = 404;
+        throw error;
       }
 
       // Create a new cost document in the database with the validated date (that we checked before)
@@ -87,8 +89,9 @@ router.post("/add", function (req, res) {
       res.status(200).send(costObj);
     })
     .catch((error) => {
-      // Catch any errors (user find failed or others) and return a 500 error
-      res.status(500).json({ id: userid, message: error.message });
+      // Catch any errors (user find failed or others) and return appropriate status
+      const statusCode = error.statusCode || 500;
+      res.status(statusCode).json({ id: userid, message: error.message });
     });
 });
 
@@ -125,7 +128,7 @@ router.get("/report", function (req, res) {
 
   // Validation: Check if any required parameter is missing
   if (!id || !year || !month) {
-    return res.status(500).json({
+    return res.status(400).json({
       id: id,
       message: "Missing required parameters (id, year, month)",
     });
@@ -138,7 +141,7 @@ router.get("/report", function (req, res) {
 
   // Validation: Ensure month is between 1-12
   if (requestMonth < 1 || requestMonth > 12) {
-    return res.status(500).json({
+    return res.status(400).json({
       id: userid,
       message: "Month must be between 1 and 12",
     });
