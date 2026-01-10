@@ -152,44 +152,59 @@ router.get("/report", function (req, res) {
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
 
-  // Check if the requested month is in the past
-  const isPastMonth =
-    requestYear < currentYear ||
-    (requestYear === currentYear && requestMonth < currentMonth);
+  // Validation: Check if the user exists in the database
+  User.findOne({ id: userid })
+    .then((userExists) => {
+      // If the user is not found, throw an error
+      if (!userExists) {
+        const error = new Error("User not found");
+        error.statusCode = 404;
+        throw error;
+      }
 
-  /*
-   * If the requested month is in the PAST, check if we have a cached report.
-   * This implements the Computed Design Pattern - we only cache past months
-   * because they cannot have new costs added (server prevents past dates).
-   */
-  if (isPastMonth) {
-    // Try to find an existing cached report for this user, year, and month
-    Report.findOne({ userid: userid, year: requestYear, month: requestMonth })
-      .then((existingReport) => {
-        // If cached report exists, return it immediately
-        if (existingReport) {
-          return res.status(200).json({
-            userid: existingReport.userid,
-            year: existingReport.year,
-            month: existingReport.month,
-            costs: existingReport.costs,
-          });
-        }
+      // Check if the requested month is in the past
+      const isPastMonth =
+        requestYear < currentYear ||
+        (requestYear === currentYear && requestMonth < currentMonth);
 
-        // No cached report found, compute it and save for future requests
-        return compute(userid, requestYear, requestMonth, res, true);
-      })
-      .catch((error) => {
-        // Handle database errors
-        res.status(500).json({ id: userid, message: error.message });
-      });
-  } else {
-    /*
-     * For CURRENT or FUTURE months, always compute in real-time.
-     * We don't cache these because costs can still be added to current/future months.
-     */
-    compute(userid, requestYear, requestMonth, res, false);
-  }
+      /*
+       * If the requested month is in the PAST, check if we have a cached report.
+       * This implements the Computed Design Pattern - we only cache past months
+       * because they cannot have new costs added (server prevents past dates).
+       */
+      if (isPastMonth) {
+        // Try to find an existing cached report for this user, year, and month
+        return Report.findOne({
+          userid: userid,
+          year: requestYear,
+          month: requestMonth,
+        }).then((existingReport) => {
+          // If cached report exists, return it immediately
+          if (existingReport) {
+            return res.status(200).json({
+              userid: existingReport.userid,
+              year: existingReport.year,
+              month: existingReport.month,
+              costs: existingReport.costs,
+            });
+          }
+
+          // No cached report found, compute it and save for future requests
+          return compute(userid, requestYear, requestMonth, res, true);
+        });
+      } else {
+        /*
+         * For CURRENT or FUTURE months, always compute in real-time.
+         * We don't cache these because costs can still be added to current/future months.
+         */
+        compute(userid, requestYear, requestMonth, res, false);
+      }
+    })
+    .catch((error) => {
+      // Handle database errors or user not found
+      const statusCode = error.statusCode || 500;
+      res.status(statusCode).json({ id: userid, message: error.message });
+    });
 });
 
 /*
