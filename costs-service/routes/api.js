@@ -1,19 +1,31 @@
+/*
+ * API Router Module
+ * This module defines the public API endpoints for the application.
+ */
+
 const express = require("express");
 const router = express.Router();
 
+// Import database models for the application
 const Cost = require("../models/cost");
 const User = require("../models/user");
 const Report = require("../models/report");
 
+// Define constant for valid costs categories
 const validCategories = ["food", "health", "housing", "sports", "education"];
 
-// Create a new cost entry for a user
+/*
+ * POST /add
+ * Creates a new cost entry for a user.
+ * Returns the created cost object.
+ */
 router.post("/add", function (req, res) {
   // Extract all parameters from the request body
   const { description, category, userid, sum, date } = req.body;
 
   // Validation: Check if any required field is missing from the request body
   if (!description || !category || !userid || !sum) {
+    // Return error if parameters are missing
     return res.status(400).json({
       id: userid,
       message:
@@ -23,6 +35,7 @@ router.post("/add", function (req, res) {
 
   // Validation: Ensure the 'sum' parameter is not a negative number
   if (sum < 0) {
+    // Return error for negative value
     return res
       .status(400)
       .json({ id: userid, message: "Sum can't be negative number" });
@@ -30,6 +43,7 @@ router.post("/add", function (req, res) {
 
   // Validation: Verify if the provided category is in the valid categories
   if (!validCategories.includes(category)) {
+    // Return error for unknown categories
     return res
       .status(400)
       .json({ id: userid, message: `${category} category invalid` });
@@ -53,6 +67,7 @@ router.post("/add", function (req, res) {
     // Reject the request if the date is in a past month or year
     // This ensures costs can only be added for current or future months
     if (isPastYear || isPastMonth) {
+      // Reject dates before current month
       return res
         .status(400)
         .json({ id: userid, message: "Can't add cost with a past date" });
@@ -72,7 +87,7 @@ router.post("/add", function (req, res) {
         throw error;
       }
 
-      // Create a new cost document in the database with the validated date (that we checked before)
+      // If user exists, Create a new cost document in the database with the validated date
       return Cost.create({
         description,
         category,
@@ -95,7 +110,7 @@ router.post("/add", function (req, res) {
     });
 });
 
-// Retrieve monthly report of costs for a user (with caching for past months)
+
 /*
  * COMPUTED DESIGN PATTERN IMPLEMENTATION FOR MONTHLY REPORTS
  *
@@ -121,6 +136,11 @@ router.post("/add", function (req, res) {
  *
  * The computed report groups all costs by category and formats them according to
  * the specification, ensuring all 5 categories are present even if empty.
+ */
+/*
+ * GET /report
+ * Retrieve monthly report of costs for a user (with caching for past months)
+ * Returns the requested report.
  */
 router.get("/report", function (req, res) {
   // Extract query parameters: id, year, and month
@@ -292,6 +312,7 @@ function formatReport(userid, year, month, costs) {
     { sports: categorizedCosts.sports },
   ];
 
+  // Return the formatted report object
   return {
     userid: userid,
     year: year,

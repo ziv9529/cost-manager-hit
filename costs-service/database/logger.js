@@ -1,3 +1,9 @@
+/*
+ * Logger Service Module
+ * This module initializes the Pino logger and provides a utility function
+ * to persist application logs into the MongoDB database.
+ */
+
 const pino = require("pino");
 const Log = require("../models/log");
 
@@ -6,7 +12,11 @@ const logger = pino({
   level: "info",
 });
 
-// Function to save log to MongoDB
+/*
+ * Save Log to MongoDB
+ * Asynchronously validates input and saves a log entry to the database.
+ * Checks for active DB connection before attempting creation.
+ */
 const saveLogToMongoDB = async (logData) => {
   try {
     // Convert userid to number, default to 0 if not a valid number

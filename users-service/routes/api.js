@@ -1,9 +1,19 @@
+/*
+ * API Router Module
+ * This module defines the public API endpoints for the application.
+ */
+
 const express = require("express");
 const router = express.Router();
 
+// Import the User model for database operations
 const User = require("../models/user");
 
-// Create a new user
+/*
+ * POST /add
+ * Creates a new user in the system after validating the input data.
+ * Returns the created user object (excluding internal MongoDB IDs).
+ */
 router.post("/add", function (req, res) {
   // Extract all parameters from the request body
   const { id, first_name, last_name, birthday } = req.body;
@@ -17,6 +27,7 @@ router.post("/add", function (req, res) {
     });
   }
 
+  // Convert the birthday string to a Date object for comparison
   const userBirthday = new Date(birthday);
 
   // Validation: Ensure the birthday is not in the future
@@ -58,6 +69,11 @@ router.post("/add", function (req, res) {
     });
 });
 
+/*
+ * GET /users
+ * Retrieves a list of all registered users.
+ * Returns a JSON array of all users.
+ */
 router.get("/users", function (req, res) {
   try {
     // Query the database to get all users
@@ -81,7 +97,11 @@ router.get("/users", function (req, res) {
   }
 });
 
-// Retrieve a specific user by id
+/*
+ * GET /users/:id
+ * Retrieves details for a specific user based on their ID.
+ * Returns the user's personal information if found.
+ */
 router.get("/users/:id", function (req, res) {
   // Extract the user ID from the URL parameters
   const { id } = req.params;

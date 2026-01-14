@@ -1,3 +1,10 @@
+/*
+ * Costs Service Tests
+ * This module performs testing on the Costs Service API endpoints.
+ * It validates cost creation, user validation, and the monthly report
+ * generation logic
+ */
+
 const request = require("supertest");
 const mongoose = require("mongoose");
 const { app, connectDB } = require("../app");
@@ -5,8 +12,14 @@ const Cost = require("../models/cost");
 const User = require("../models/user");
 const Report = require("../models/report");
 
+/*
+ * Test Suite Configuration
+ * Manages database connection setup and ensures a clean state
+ * between individual test cases by clearing collections.
+ */
 describe("Costs Service API", () => {
-  let testIdCounter = 1; // Counter for unique test IDs
+  // Counter for unique test IDs
+  let testIdCounter = 1;
 
   beforeAll(async () => {
     // Connect to test database
@@ -21,7 +34,7 @@ describe("Costs Service API", () => {
   });
 
   afterEach(async () => {
-    // Clean up after each test
+    // Clean up after each individual test
     await Cost.deleteMany({});
     await User.deleteMany({});
     await Report.deleteMany({});
@@ -34,6 +47,11 @@ describe("Costs Service API", () => {
     await mongoose.connection.close();
   });
 
+ /*
+  * POST /api/add Tests
+  * Verifies the creation of new cost items, input validation,
+  * security against unwanted fields, and logic constraints.
+  */
   describe("POST /api/add", () => {
     // Test successful cost creation
     test("should create a new cost successfully", async () => {
@@ -56,8 +74,10 @@ describe("Costs Service API", () => {
         sum: 25.5,
       };
 
+      // Execute the POST request to create a cost
       const response = await request(app).post("/api/add").send(costData);
 
+      // Verify response status and data integrity
       expect(response.status).toBe(200);
       expect(response.body.userid).toBe(userId);
       expect(response.body.description).toBe("lunch");
@@ -70,11 +90,12 @@ describe("Costs Service API", () => {
       const costData = {
         userid: 1,
         description: "lunch",
-        // missing category and sum
+        // missing category and sum fields
       };
 
       const response = await request(app).post("/api/add").send(costData);
 
+      // Expect a Bad Request status due to validation failure
       expect(response.status).toBe(400);
       expect(response.body.message).toContain(
         "Missing some required parameters"
@@ -101,6 +122,7 @@ describe("Costs Service API", () => {
 
       const response = await request(app).post("/api/add").send(costData);
 
+      // Verify that enum validation in the schema is working
       expect(response.status).toBe(400);
       expect(response.body.message).toContain("invalid category invalid");
     });
