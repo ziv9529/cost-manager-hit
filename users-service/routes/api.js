@@ -9,6 +9,15 @@ const router = express.Router();
 // Import the User model for database operations
 const User = require("../models/user");
 
+// Internal Error Codes
+const errorCodes = {
+    missingParameters: 100,
+    userNotFound: 404,
+    userAlreadyExists: 409,
+    invalidBirthday: 105,
+    serverInternalError: 500
+};
+
 /*
  * POST /add
  * Creates a new user in the system after validating the input data.
@@ -21,9 +30,8 @@ router.post("/add", function (req, res) {
   // Validation: Check if any required field is missing from the request body
   if (!id || !first_name || !last_name || !birthday) {
     return res.status(400).json({
-      id: id,
-      message:
-        "Missing some required parameters (id, first_name, last_name, birthday)",
+      id: errorCodes.missingParameters,
+      message: "Missing some required parameters (id, first_name, last_name, birthday)",
     });
   }
 
@@ -34,7 +42,10 @@ router.post("/add", function (req, res) {
   if (userBirthday > new Date()) {
     return res
       .status(400)
-      .json({ id: id, message: "Birthday date can't be in the future" });
+      .json({
+        id: errorCodes.invalidBirthday,
+        message: "Birthday date can't be in the future"
+      });
   }
 
   // Query the database to verify that the user doesn't already exist
@@ -44,6 +55,7 @@ router.post("/add", function (req, res) {
       if (userExists) {
         const error = new Error("User already exists");
         error.statusCode = 409;
+        error.errorCode = errorCodes.userAlreadyExists;
         throw error;
       }
 
@@ -65,7 +77,8 @@ router.post("/add", function (req, res) {
     .catch((error) => {
       // Catch any errors (user find failed or others) and return appropriate status
       const statusCode = error.statusCode || 500;
-      res.status(statusCode).json({ id: id, message: error.message });
+      const errorCode = error.errorCode || errorCodes.serverInternalError;
+      res.status(statusCode).json({ id: errorCode, message: error.message });
     });
 });
 
@@ -89,11 +102,11 @@ router.get("/users", function (req, res) {
       })
       .catch((error) => {
         // Catch any errors and return a 500 error
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ id: errorCodes.serverInternalError, message: error.message });
       });
   } catch (error) {
     // Catch any errors and return a 500 error
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ id: errorCodes.serverInternalError, message: error.message });
   }
 });
 
@@ -113,6 +126,7 @@ router.get("/users/:id", function (req, res) {
       if (!user) {
         const error = new Error("User not found");
         error.statusCode = 404;
+        error.errorCode = errorCodes.userNotFound;
         throw error;
       }
 
@@ -127,6 +141,7 @@ router.get("/users/:id", function (req, res) {
     .catch((error) => {
       // Catch any errors and return appropriate status code with id and message
       const statusCode = error.statusCode || 500;
+      const errorCode = error.errorCode || errorCodes.serverInternalError;
       res.status(statusCode).json({ id: id, message: error.message });
     });
 });

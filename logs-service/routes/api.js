@@ -9,6 +9,11 @@ const router = express.Router();
 // Import database models for the application
 const Log = require("../models/log");
 
+// Internal Error Codes
+const errorCodes = {
+    serverInternalError: 500
+};
+
 /*
  * GET /logs
  * Retrieve all system logs.
@@ -23,7 +28,7 @@ router.get("/logs", function (req, res) {
     })
     .catch((error) => {
       // If an error occurs during the database query, return a 500 Internal Server Error
-      res.status(500).json({ message: error.message });
+      res.status(500).json({id: errorCodes.serverInternalError, message: error.message });
     });
 });
 

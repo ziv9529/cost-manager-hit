@@ -11,6 +11,17 @@ const Cost = require("../models/cost");
 const User = require("../models/user");
 const Report = require("../models/report");
 
+// Internal Error Codes
+const errorCodes = {
+    missingParameters: 100,
+    invalidSum: 101,
+    invalidCategory: 102,
+    pastDateNotAllowed: 103,
+    invalidMonthRange: 104,
+    userNotFound: 404,
+    serverInternalError: 500
+};
+
 // Define constant for valid costs categories
 const validCategories = ["food", "health", "housing", "sports", "education"];
 
@@ -27,7 +38,7 @@ router.post("/add", function (req, res) {
   if (!description || !category || !userid || !sum) {
     // Return error if parameters are missing
     return res.status(400).json({
-      id: userid,
+      id: errorCodes.invalidCategory,
       message:
         "Missing some required parameters (description, category, userid, sum)",
     });
@@ -38,7 +49,10 @@ router.post("/add", function (req, res) {
     // Return error for negative value
     return res
       .status(400)
-      .json({ id: userid, message: "Sum can't be negative number" });
+      .json({
+        id: errorCodes.invalidSum,
+        message: "Sum can't be negative number"
+      });
   }
 
   // Validation: Verify if the provided category is in the valid categories
@@ -46,7 +60,10 @@ router.post("/add", function (req, res) {
     // Return error for unknown categories
     return res
       .status(400)
-      .json({ id: userid, message: `${category} category invalid` });
+      .json({
+        id: errorCodes.invalidCategory,
+        message: `${category} category invalid`
+      });
   }
 
   // Get the current date
@@ -70,7 +87,10 @@ router.post("/add", function (req, res) {
       // Reject dates before current month
       return res
         .status(400)
-        .json({ id: userid, message: "Can't add cost with a past date" });
+        .json({
+          id: errorCodes.pastDateNotAllowed,
+          message: "Can't add cost with a past date"
+        });
     }
   } else {
     // No date provided, use current date as default
@@ -84,6 +104,7 @@ router.post("/add", function (req, res) {
       if (!userExists) {
         const error = new Error("User not found");
         error.statusCode = 404;
+        error.errorCode = errorCodes.userNotFound;
         throw error;
       }
 
@@ -106,7 +127,8 @@ router.post("/add", function (req, res) {
     .catch((error) => {
       // Catch any errors (user find failed or others) and return appropriate status
       const statusCode = error.statusCode || 500;
-      res.status(statusCode).json({ id: userid, message: error.message });
+      const errorCode = error.errorCode || errorCodes.serverInternalError;
+      res.status(statusCode).json({ id: errorCode, message: error.message });
     });
 });
 
@@ -149,7 +171,7 @@ router.get("/report", function (req, res) {
   // Validation: Check if any required parameter is missing
   if (!id || !year || !month) {
     return res.status(400).json({
-      id: id,
+      id: errorCodes.missingParameters,
       message: "Missing required parameters (id, year, month)",
     });
   }
@@ -162,7 +184,7 @@ router.get("/report", function (req, res) {
   // Validation: Ensure month is between 1-12
   if (requestMonth < 1 || requestMonth > 12) {
     return res.status(400).json({
-      id: userid,
+      id: errorCodes.invalidMonthRange,
       message: "Month must be between 1 and 12",
     });
   }
@@ -179,6 +201,7 @@ router.get("/report", function (req, res) {
       if (!userExists) {
         const error = new Error("User not found");
         error.statusCode = 404;
+        error.errorCode = errorCodes.userNotFound;
         throw error;
       }
 
@@ -223,7 +246,8 @@ router.get("/report", function (req, res) {
     .catch((error) => {
       // Handle database errors or user not found
       const statusCode = error.statusCode || 500;
-      res.status(statusCode).json({ id: userid, message: error.message });
+      const errorCode = error.errorCode || errorCodes.serverInternalError;
+      res.status(statusCode).json({ id: errorCode, message: error.message });
     });
 });
 
@@ -271,7 +295,7 @@ function compute(userid, year, month, res, shouldSave = false) {
     })
     .catch((error) => {
       // Handle database errors (query or save)
-      res.status(500).json({ id: userid, message: error.message });
+      res.status(500).json({ id: errorCodes.serverInternalError, message: error.message });
     });
 }
 

@@ -6,6 +6,11 @@
 const express = require("express");
 const router = express.Router();
 
+// Internal Error Codes
+const errorCodes = {
+    serverInternalError: 500
+};
+
 /*
  * GET /about
  * Retrieves information about the development team.
@@ -30,7 +35,7 @@ router.get("/about", function (req, res) {
     res.status(200).send(developersTeam);
   } catch (error) {
     // Catch any errors during processing and return a 500 Internal Server Error
-    res.status(500).json({ message: error.message });
+    res.status(500).json({id: errorCodes.serverInternalError, message: error.message });
   }
 });
 
