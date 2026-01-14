@@ -38,7 +38,7 @@ router.post("/add", function (req, res) {
   if (!description || !category || !userid || !sum) {
     // Return error if parameters are missing
     return res.status(400).json({
-      id: errorCodes.invalidCategory,
+      id: errorCodes.missingParameters,
       message:
         "Missing some required parameters (description, category, userid, sum)",
     });
