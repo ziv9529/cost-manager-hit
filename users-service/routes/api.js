@@ -142,7 +142,7 @@ router.get("/users/:id", function (req, res) {
       // Catch any errors and return appropriate status code with id and message
       const statusCode = error.statusCode || 500;
       const errorCode = error.errorCode || errorCodes.serverInternalError;
-      res.status(statusCode).json({ id: id, message: error.message });
+      res.status(statusCode).json({ id: errorCode, message: error.message });
     });
 });
 
