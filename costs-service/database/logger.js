@@ -4,6 +4,7 @@
  * to persist application logs into the MongoDB database.
  */
 
+const mongoose = require("mongoose");
 const pino = require("pino");
 const Log = require("../models/log");
 
@@ -20,7 +21,7 @@ const logger = pino({
 const saveLogToMongoDB = async (logData) => {
   try {
     // Only attempt to save if database connection is active
-    if (!require("mongoose").connection.db) {
+    if (!mongoose.connection.db) {
       return; // Database not connected, skip logging
     }
 
