@@ -10,7 +10,7 @@ const Schema = mongoose.Schema;
 /*
  * Log Schema Definition
  * Flattened structure for minimal and efficient log storage.
- * Stores user ID, service, HTTP method, URL, status, response time, and timestamp.
+ * Stores service, HTTP method, URL, status, response time, and timestamp.
  */
 const LogsSchema = new Schema(
   {
