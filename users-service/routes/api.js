@@ -99,7 +99,6 @@ router.post("/add", function (req, res) {
  * Returns a JSON array of all users.
  */
 router.get("/users", function (req, res) {
-  try {
     // Query the database to get all users
     User.find({})
       .then((users) => {
@@ -117,12 +116,6 @@ router.get("/users", function (req, res) {
           .status(500)
           .json({ id: errorCodes.serverInternalError, message: error.message });
       });
-  } catch (error) {
-    // Catch any errors and return a 500 error
-    res
-      .status(500)
-      .json({ id: errorCodes.serverInternalError, message: error.message });
-  }
 });
 
 /*
