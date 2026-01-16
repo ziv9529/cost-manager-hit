@@ -1,36 +1,27 @@
 #!/usr/bin/env node
 
-/**
- * Module dependencies.
+/*
+ * Users Service - Server Entry Point
+ * This module initializes the HTTP server and connects to the database
  */
 
+// Module dependencies
 const { app, connectDB } = require("../app");
 const debug = require("debug")("user-service:server");
 const http = require("http");
 
-/**
- * Connect to MongoDB first, then start server
- */
-
+// Connect to MongoDB first to ensure data access before accepting traffic
 connectDB()
   .then(() => {
-    /**
-     * Get port from environment and store in Express.
-     */
 
+    // Get port from environment and store in Express
     const port = normalizePort(process.env.USERS_PORT || "3000");
     app.set("port", port);
 
-    /**
-     * Create HTTP server.
-     */
-
+    // Create HTTP server
     const server = http.createServer(app);
 
-    /**
-     * Event listener for HTTP server "listening" event.
-     */
-
+    // Event listener for HTTP server "error" event
     const onListening = () => {
       const addr = server.address();
       const bind =
