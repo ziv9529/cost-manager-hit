@@ -58,7 +58,7 @@ app.use((req, res, next) => {
   // Listen for the 'finish' event to log after response is sent
   res.on("finish", () => {
     saveLogToMongoDB({
-      // Extract user ID from body or params, defaulting to 0 if not present
+      // Construct the log object with request metadata and execution duration
       method: req.method,
       url: req.originalUrl,
       statusCode: res.statusCode,

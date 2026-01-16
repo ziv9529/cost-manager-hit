@@ -57,6 +57,7 @@ app.use((req, res, next) => {
 
   // Listen for the 'finish' event to log after response is sent
   res.on("finish", () => {
+    // Construct the log object with request metadata and execution duration
     saveLogToMongoDB({
       method: req.method,
       url: req.originalUrl,
