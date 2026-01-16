@@ -1,3 +1,8 @@
+/*
+ * Logs Service Tests
+ * Tests the core endpoint: GET /api/logs
+ */
+
 const request = require("supertest");
 const mongoose = require("mongoose");
 const { app, connectDB } = require("../app");

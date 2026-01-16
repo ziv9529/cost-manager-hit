@@ -1,5 +1,5 @@
 /*
- * Admin Service Tests - Minimal test suite
+ * Admin Service Tests
  * Tests the GET /api/about endpoint for retrieving developer team information
  */
 

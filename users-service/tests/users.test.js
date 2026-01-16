@@ -1,3 +1,8 @@
+/*
+ * Users Service Tests
+ * Tests the core endpoints: POST /api/add , GET /api/users and GET /api/user/:id
+ */
+
 const request = require("supertest");
 const mongoose = require("mongoose");
 const { app, connectDB } = require("../app");

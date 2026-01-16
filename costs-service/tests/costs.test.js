@@ -1,5 +1,5 @@
 /*
- * Costs Service Tests - Minimal test suite
+ * Costs Service Tests
  * Tests the core endpoints: POST /api/add and GET /api/report
  */
 
