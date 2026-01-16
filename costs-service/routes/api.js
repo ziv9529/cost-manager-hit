@@ -17,6 +17,7 @@ const errorCodes = {
   invalidSum: 101,
   pastDateNotAllowed: 102,
   invalidMonthRange: 103,
+  sameDayRequiresTime: 104,
   userNotFound: 404,
   serverInternalError: 500,
 };
@@ -49,32 +50,43 @@ router.post("/add", function (req, res) {
     });
   }
 
-  // Get the current date
+  // Get the current date and time
   const nowDate = new Date();
   let costDate;
 
-  // Check if the user provided a specific date in the request
-  // If a date is provided, validate and use it; otherwise, default to the current date
+  // Check if the user provided a specific date/time in the request
+  // If a date is provided, validate and use it; otherwise, default to the current date and time
   if (date) {
+    // Parse the provided date (can be "2026-01-16" or "2026-01-16T12:00:00")
     costDate = new Date(date);
 
-    // Check if the provided date is in the past by comparing the year and the month
-    const isPastYear = costDate.getFullYear() < nowDate.getFullYear();
-    const isPastMonth =
-      costDate.getFullYear() === nowDate.getFullYear() &&
-      costDate.getMonth() < nowDate.getMonth();
+    // Reject the request if the date/time is in the past
+    if (costDate < nowDate) {
+      // Check if the provided date is today (just missing the time component)
+      const providedDay = new Date(date);
+      const todayDay = new Date();
+      const isSameDay =
+        providedDay.getFullYear() === todayDay.getFullYear() &&
+        providedDay.getMonth() === todayDay.getMonth() &&
+        providedDay.getDate() === todayDay.getDate();
 
-    // Reject the request if the date is in a past month or year
-    // This ensures costs can only be added for current or future months
-    if (isPastYear || isPastMonth) {
-      // Reject dates before current month
+      // If it's today's date without a future time, give a specific error message
+      if (isSameDay) {
+        return res.status(400).json({
+          id: errorCodes.sameDayRequiresTime,
+          message:
+            "For same-day costs, you must include a future time. Use format: '2026-01-16T18:00:00'. If no date is provided, the cost will be added with the current timestamp.",
+        });
+      }
+
+      // Otherwise, it's a past date (previous day or earlier)
       return res.status(400).json({
         id: errorCodes.pastDateNotAllowed,
         message: "Can't add cost with a past date",
       });
     }
   } else {
-    // No date provided, use current date as default
+    // No date provided, use current date and time as default (now)
     costDate = nowDate;
   }
 

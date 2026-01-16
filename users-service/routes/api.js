@@ -12,11 +12,11 @@ const User = require("../models/user");
 // Import mongoose for potential cross-database queries
 const mongoose = require("mongoose");
 
-// Get the costs database connection (only if available)
+// Get the costs collection from the same database (only if available)
 let costsDb = null;
 try {
-  // Try to access costs database via mongoose
-  costsDb = mongoose.connection.useDb("costs", { useCache: true });
+  // Access the costs collection from the same mongoose connection
+  costsDb = mongoose.connection.collection("costs");
 } catch (error) {
   costsDb = null;
 }
@@ -99,23 +99,23 @@ router.post("/add", function (req, res) {
  * Returns a JSON array of all users.
  */
 router.get("/users", function (req, res) {
-    // Query the database to get all users
-    User.find({})
-      .then((users) => {
-        // Send the list of users back to the client (exclude _id field)
-        const usersWithoutId = users.map((user) => {
-          const userObj = user.toObject();
-          delete userObj._id;
-          return userObj;
-        });
-        res.status(200).send(usersWithoutId);
-      })
-      .catch((error) => {
-        // Catch any errors and return a 500 error
-        res
-          .status(500)
-          .json({ id: errorCodes.serverInternalError, message: error.message });
+  // Query the database to get all users
+  User.find({})
+    .then((users) => {
+      // Send the list of users back to the client (exclude _id field)
+      const usersWithoutId = users.map((user) => {
+        const userObj = user.toObject();
+        delete userObj._id;
+        return userObj;
       });
+      res.status(200).send(usersWithoutId);
+    })
+    .catch((error) => {
+      // Catch any errors and return a 500 error
+      res
+        .status(500)
+        .json({ id: errorCodes.serverInternalError, message: error.message });
+    });
 });
 
 /*
@@ -138,38 +138,29 @@ router.get("/users/:id", function (req, res) {
         throw error;
       }
 
-      // Try to get total costs from costs collection
-      let totalPromise;
-      
-      if (costsDb) {
-        // Query costs collection if database is available
-        totalPromise = costsDb
-          .collection("costs")
-          .aggregate([
-            { $match: { userid: parseInt(id) } },
-            { $group: { _id: null, total: { $sum: "$sum" } } },
-          ])
-          .toArray()
-          .then((result) => {
-            return result.length > 0 ? result[0].total : 0;
-          })
-          .catch((error) => {
-            // If aggregation fails, return 0
-            return 0;
-          });
-      } else {
-        // If costs database not available, return 0
-        totalPromise = Promise.resolve(0);
+      // Query costs collection (required)
+      if (!costsDb) {
+        const error = new Error("Costs database connection failed");
+        error.statusCode = 500;
+        error.errorCode = errorCodes.serverInternalError;
+        throw error;
       }
 
-      return totalPromise.then((total) => {
-        return {
-          first_name: user.first_name,
-          last_name: user.last_name,
-          id: user.id,
-          total: total,
-        };
-      });
+      return costsDb
+        .aggregate([
+          { $match: { userid: parseInt(id) } },
+          { $group: { _id: null, total: { $sum: "$sum" } } },
+        ])
+        .toArray()
+        .then((result) => {
+          const total = result.length > 0 ? result[0].total : 0;
+          return {
+            first_name: user.first_name,
+            last_name: user.last_name,
+            id: user.id,
+            total: total,
+          };
+        });
     })
     .then((response) => {
       // Send the user details back to the client

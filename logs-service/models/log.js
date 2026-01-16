@@ -9,33 +9,39 @@ const Schema = mongoose.Schema;
 
 /*
  * Log Schema Definition
- * Defines the structure for log documents including user ID, action,
- * timestamp, and additional details.
+ * Flattened structure for minimal and efficient log storage.
+ * Stores user ID, service, HTTP method, URL, status, response time, and timestamp.
  */
 const LogsSchema = new Schema(
   {
-    // The ID of the user performing the action
-    userid: {
-      type: Number,
-      required: true,
-    },
-    // A string description of the action performed
-    action: {
-      type: String,
-      required: true,
-    },
     // The service that created this log entry
     service: {
       type: String,
+      required: true,
+    },
+    // HTTP method (GET, POST, PUT, DELETE, etc.)
+    method: {
+      type: String,
+      required: true,
+    },
+    // The endpoint URL path
+    url: {
+      type: String,
+      required: true,
+    },
+    // HTTP response status code
+    statusCode: {
+      type: Number,
+      required: true,
+    },
+    // Response time in milliseconds
+    responseTime: {
+      type: Number,
     },
     // The time when the action occurred (defaults to current time)
     timestamp: {
       type: Date,
       default: Date.now,
-    },
-    // Flexible object to store additional details
-    details: {
-      type: Object,
     },
   },
   // Disable the version key (__v) for cleaner documents

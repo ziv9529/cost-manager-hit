@@ -48,9 +48,9 @@ app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "pug");
 
 /*
-* Pino logging middleware - save to MongoDB
-* Captures start time and logs details upon response finish
-*/
+ * Pino logging middleware - save to MongoDB
+ * Captures start time and logs details upon response finish
+ */
 app.use((req, res, next) => {
   // Capture the start time of the request to calculate duration later
   const startTime = Date.now();
@@ -59,15 +59,10 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     saveLogToMongoDB({
       // Extract user ID from body or params, defaulting to 0 if not present
-      userid: req.body?.userid || req.params?.id || 0,
-      action: `${req.method} ${req.originalUrl}`,
-      // Log specific request details
-      details: {
-        method: req.method,
-        url: req.originalUrl,
-        statusCode: res.statusCode,
-        responseTime: Date.now() - startTime,
-      },
+      method: req.method,
+      url: req.originalUrl,
+      statusCode: res.statusCode,
+      responseTime: Date.now() - startTime,
     });
   });
 
