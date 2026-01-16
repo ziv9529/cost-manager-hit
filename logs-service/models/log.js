@@ -24,6 +24,10 @@ const LogsSchema = new Schema(
       type: String,
       required: true,
     },
+    // The service that created this log entry
+    service: {
+      type: String,
+    },
     // The time when the action occurred (defaults to current time)
     timestamp: {
       type: Date,

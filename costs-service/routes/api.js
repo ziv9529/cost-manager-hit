@@ -13,13 +13,13 @@ const Report = require("../models/report");
 
 // Internal Error Codes
 const errorCodes = {
-    missingParameters: 100,
-    invalidSum: 101,
-    invalidCategory: 102,
-    pastDateNotAllowed: 103,
-    invalidMonthRange: 104,
-    userNotFound: 404,
-    serverInternalError: 500
+  missingParameters: 100,
+  invalidSum: 101,
+  invalidCategory: 102,
+  pastDateNotAllowed: 103,
+  invalidMonthRange: 104,
+  userNotFound: 404,
+  serverInternalError: 500,
 };
 
 // Define constant for valid costs categories
@@ -47,23 +47,19 @@ router.post("/add", function (req, res) {
   // Validation: Ensure the 'sum' parameter is not a negative number
   if (sum < 0) {
     // Return error for negative value
-    return res
-      .status(400)
-      .json({
-        id: errorCodes.invalidSum,
-        message: "Sum can't be negative number"
-      });
+    return res.status(400).json({
+      id: errorCodes.invalidSum,
+      message: "Sum can't be negative number",
+    });
   }
 
   // Validation: Verify if the provided category is in the valid categories
   if (!validCategories.includes(category)) {
     // Return error for unknown categories
-    return res
-      .status(400)
-      .json({
-        id: errorCodes.invalidCategory,
-        message: `${category} category invalid`
-      });
+    return res.status(400).json({
+      id: errorCodes.invalidCategory,
+      message: `${category} category invalid`,
+    });
   }
 
   // Get the current date
@@ -85,12 +81,10 @@ router.post("/add", function (req, res) {
     // This ensures costs can only be added for current or future months
     if (isPastYear || isPastMonth) {
       // Reject dates before current month
-      return res
-        .status(400)
-        .json({
-          id: errorCodes.pastDateNotAllowed,
-          message: "Can't add cost with a past date"
-        });
+      return res.status(400).json({
+        id: errorCodes.pastDateNotAllowed,
+        message: "Can't add cost with a past date",
+      });
     }
   } else {
     // No date provided, use current date as default
@@ -131,7 +125,6 @@ router.post("/add", function (req, res) {
       res.status(statusCode).json({ id: errorCode, message: error.message });
     });
 });
-
 
 /*
  * COMPUTED DESIGN PATTERN IMPLEMENTATION FOR MONTHLY REPORTS
@@ -295,7 +288,9 @@ function compute(userid, year, month, res, shouldSave = false) {
     })
     .catch((error) => {
       // Handle database errors (query or save)
-      res.status(500).json({ id: errorCodes.serverInternalError, message: error.message });
+      res
+        .status(500)
+        .json({ id: errorCodes.serverInternalError, message: error.message });
     });
 }
 

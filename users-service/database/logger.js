@@ -30,6 +30,7 @@ const saveLogToMongoDB = async (logData) => {
     await Log.create({
       userid: userid,
       action: logData.action,
+      service: "users-service",
       details: logData.details || {},
     });
   } catch (error) {

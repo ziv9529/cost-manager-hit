@@ -9,13 +9,16 @@ const router = express.Router();
 // Import the User model for database operations
 const User = require("../models/user");
 
+// Import the Cost model to calculate total costs for users
+const Cost = require("../../costs-service/models/cost");
+
 // Internal Error Codes
 const errorCodes = {
-    missingParameters: 100,
-    userNotFound: 404,
-    userAlreadyExists: 409,
-    invalidBirthday: 105,
-    serverInternalError: 500
+  missingParameters: 100,
+  userNotFound: 404,
+  userAlreadyExists: 409,
+  invalidBirthday: 105,
+  serverInternalError: 500,
 };
 
 /*
@@ -31,7 +34,8 @@ router.post("/add", function (req, res) {
   if (!id || !first_name || !last_name || !birthday) {
     return res.status(400).json({
       id: errorCodes.missingParameters,
-      message: "Missing some required parameters (id, first_name, last_name, birthday)",
+      message:
+        "Missing some required parameters (id, first_name, last_name, birthday)",
     });
   }
 
@@ -40,12 +44,10 @@ router.post("/add", function (req, res) {
 
   // Validation: Ensure the birthday is not in the future
   if (userBirthday > new Date()) {
-    return res
-      .status(400)
-      .json({
-        id: errorCodes.invalidBirthday,
-        message: "Birthday date can't be in the future"
-      });
+    return res.status(400).json({
+      id: errorCodes.invalidBirthday,
+      message: "Birthday date can't be in the future",
+    });
   }
 
   // Query the database to verify that the user doesn't already exist
@@ -102,18 +104,22 @@ router.get("/users", function (req, res) {
       })
       .catch((error) => {
         // Catch any errors and return a 500 error
-        res.status(500).json({ id: errorCodes.serverInternalError, message: error.message });
+        res
+          .status(500)
+          .json({ id: errorCodes.serverInternalError, message: error.message });
       });
   } catch (error) {
     // Catch any errors and return a 500 error
-    res.status(500).json({ id: errorCodes.serverInternalError, message: error.message });
+    res
+      .status(500)
+      .json({ id: errorCodes.serverInternalError, message: error.message });
   }
 });
 
 /*
  * GET /users/:id
  * Retrieves details for a specific user based on their ID.
- * Returns the user's personal information if found.
+ * Returns the user's personal information including total costs if found.
  */
 router.get("/users/:id", function (req, res) {
   // Extract the user ID from the URL parameters
@@ -130,12 +136,20 @@ router.get("/users/:id", function (req, res) {
         throw error;
       }
 
-      // Send the user details back to the client
-      res.status(200).json({
-        first_name: user.first_name,
-        last_name: user.last_name,
-        id: user.id,
-        birthday: user.birthday,
+      // Calculate total costs for the user by summing all costs with this user ID
+      return Cost.aggregate([
+        { $match: { userid: parseInt(id) } },
+        { $group: { _id: null, total: { $sum: "$sum" } } },
+      ]).then((result) => {
+        const total = result.length > 0 ? result[0].total : 0;
+
+        // Send the user details back to the client including total costs
+        res.status(200).json({
+          first_name: user.first_name,
+          last_name: user.last_name,
+          id: user.id,
+          total: total,
+        });
       });
     })
     .catch((error) => {
