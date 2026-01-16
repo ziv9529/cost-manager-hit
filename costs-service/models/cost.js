@@ -19,11 +19,10 @@ const CostSchema = new Schema(
       type: String,
       required: true,
     },
-    // The category of the cost, restricted to specific predefined values
+    // The category of the cost
     category: {
       type: String,
       required: true,
-      enum: ["food", "health", "housing", "sports", "education"],
     },
     // The ID of the user who recorded the cost
     userid: {

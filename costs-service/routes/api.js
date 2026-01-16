@@ -15,15 +15,11 @@ const Report = require("../models/report");
 const errorCodes = {
   missingParameters: 100,
   invalidSum: 101,
-  invalidCategory: 102,
-  pastDateNotAllowed: 103,
-  invalidMonthRange: 104,
+  pastDateNotAllowed: 102,
+  invalidMonthRange: 103,
   userNotFound: 404,
   serverInternalError: 500,
 };
-
-// Define constant for valid costs categories
-const validCategories = ["food", "health", "housing", "sports", "education"];
 
 /*
  * POST /add
@@ -50,15 +46,6 @@ router.post("/add", function (req, res) {
     return res.status(400).json({
       id: errorCodes.invalidSum,
       message: "Sum can't be negative number",
-    });
-  }
-
-  // Validation: Verify if the provided category is in the valid categories
-  if (!validCategories.includes(category)) {
-    // Return error for unknown categories
-    return res.status(400).json({
-      id: errorCodes.invalidCategory,
-      message: `${category} category invalid`,
     });
   }
 
@@ -296,20 +283,34 @@ function compute(userid, year, month, res, shouldSave = false) {
 
 /*
  * Helper function to format costs into the required report structure.
- * Groups costs by category and ensures all 5 categories are present.
+ * Groups costs by category and ensures all 5 standard categories are present,
+ * plus any additional custom categories found in the costs data.
  */
 function formatReport(userid, year, month, costs) {
+  // Standard categories that must always be included
+  const standardCategories = [
+    "food",
+    "health",
+    "housing",
+    "sports",
+    "education",
+  ];
+
   // Initialize an object to group costs by category
-  const categorizedCosts = {
-    food: [],
-    health: [],
-    housing: [],
-    sports: [],
-    education: [],
-  };
+  const categorizedCosts = {};
+
+  // Initialize all standard categories with empty arrays
+  standardCategories.forEach((cat) => {
+    categorizedCosts[cat] = [];
+  });
 
   // Group each cost by its category
   costs.forEach((cost) => {
+    // Initialize the category array if it doesn't exist (for custom categories)
+    if (!categorizedCosts[cost.category]) {
+      categorizedCosts[cost.category] = [];
+    }
+
     // Extract the day of the month from the cost date
     const day = cost.date.getDate();
 
@@ -322,14 +323,19 @@ function formatReport(userid, year, month, costs) {
   });
 
   // Format the response to match the required structure
-  // Each category is wrapped in its own object within the costs array
-  const formattedCosts = [
-    { food: categorizedCosts.food },
-    { education: categorizedCosts.education },
-    { health: categorizedCosts.health },
-    { housing: categorizedCosts.housing },
-    { sports: categorizedCosts.sports },
-  ];
+  // First, add all standard categories in order
+  const formattedCosts = standardCategories.map((cat) => ({
+    [cat]: categorizedCosts[cat],
+  }));
+
+  // Then, add any additional custom categories (those not in standard list)
+  Object.keys(categorizedCosts).forEach((cat) => {
+    if (!standardCategories.includes(cat)) {
+      formattedCosts.push({
+        [cat]: categorizedCosts[cat],
+      });
+    }
+  });
 
   // Return the formatted report object
   return {
