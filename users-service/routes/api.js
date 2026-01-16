@@ -9,8 +9,17 @@ const router = express.Router();
 // Import the User model for database operations
 const User = require("../models/user");
 
-// Import the Cost model to calculate total costs for users
-const Cost = require("../../costs-service/models/cost");
+// Import mongoose for potential cross-database queries
+const mongoose = require("mongoose");
+
+// Get the costs database connection (only if available)
+let costsDb = null;
+try {
+  // Try to access costs database via mongoose
+  costsDb = mongoose.connection.useDb("costs", { useCache: true });
+} catch (error) {
+  costsDb = null;
+}
 
 // Internal Error Codes
 const errorCodes = {
@@ -136,21 +145,42 @@ router.get("/users/:id", function (req, res) {
         throw error;
       }
 
-      // Calculate total costs for the user by summing all costs with this user ID
-      return Cost.aggregate([
-        { $match: { userid: parseInt(id) } },
-        { $group: { _id: null, total: { $sum: "$sum" } } },
-      ]).then((result) => {
-        const total = result.length > 0 ? result[0].total : 0;
+      // Try to get total costs from costs collection
+      let totalPromise;
+      
+      if (costsDb) {
+        // Query costs collection if database is available
+        totalPromise = costsDb
+          .collection("costs")
+          .aggregate([
+            { $match: { userid: parseInt(id) } },
+            { $group: { _id: null, total: { $sum: "$sum" } } },
+          ])
+          .toArray()
+          .then((result) => {
+            return result.length > 0 ? result[0].total : 0;
+          })
+          .catch((error) => {
+            // If aggregation fails, return 0
+            return 0;
+          });
+      } else {
+        // If costs database not available, return 0
+        totalPromise = Promise.resolve(0);
+      }
 
-        // Send the user details back to the client including total costs
-        res.status(200).json({
+      return totalPromise.then((total) => {
+        return {
           first_name: user.first_name,
           last_name: user.last_name,
           id: user.id,
           total: total,
-        });
+        };
       });
+    })
+    .then((response) => {
+      // Send the user details back to the client
+      res.status(200).json(response);
     })
     .catch((error) => {
       // Catch any errors and return appropriate status code with id and message
