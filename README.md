@@ -62,14 +62,7 @@ ADMIN_PORT=3003
 
 ## Running the Services
 
-**Option 1: Run all services from root**
-
-```bash
-npm install
-npm run start:all
-```
-
-**Option 2: Run each microservice individually**
+**Option 1: Run each microservice individually**
 
 ```bash
 # Users service
@@ -94,6 +87,17 @@ npm start
 ```
 
 Each service will connect to MongoDB and log its status.
+
+**Option 2: Run all services from root**
+
+after you already download deps in each service ( `npm install` on each microservice)
+
+in root:
+```bash
+npm install
+npm run start:all
+```
+
 
 ## API Endpoints
 
