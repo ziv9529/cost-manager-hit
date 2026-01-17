@@ -75,7 +75,7 @@ router.post("/add", function (req, res) {
         return res.status(400).json({
           id: errorCodes.sameDayRequiresTime,
           message:
-            "For same-day costs, you must include a future time. Use format: '2026-01-16T18:00:00'. If no date is provided, the cost will be added with the current timestamp.",
+            "Same-day costs require a future time (format: '2026-01-16T18:00:00')",
         });
       }
 
