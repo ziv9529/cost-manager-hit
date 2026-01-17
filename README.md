@@ -28,21 +28,68 @@ npm install
 
 ### Environment Configuration
 
-Create a `.env` file in the project root:
+Each microservice needs its own `.env` file in its directory:
+
+**users-service/.env**
 
 ```
-MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/cost_manager_db
+MONGODB_URI=mongodb+srv://....
 USERS_PORT=3000
+```
+
+**costs-service/.env**
+
+```
+MONGODB_URI=mongodb+srv://....
 COSTS_PORT=3001
+```
+
+**logs-service/.env**
+
+```
+MONGODB_URI=mongodb+srv://....
 LOGS_PORT=3002
+```
+
+**admin-service/.env**
+
+```
+MONGODB_URI=mongodb+srv://....
 ADMIN_PORT=3003
 ```
 
+**Note:** Each service runs independently with its own environment configuration.
+
 ## Running the Services
 
-Start all four services simultaneously:
+**Option 1: Run all services from root**
 
 ```bash
+npm install
+npm run start:all
+```
+
+**Option 2: Run each microservice individually**
+
+```bash
+# Users service
+cd users-service
+npm install
+npm start
+
+# Costs service
+cd costs-service
+npm install
+npm start
+
+# Logs service
+cd logs-service
+npm install
+npm start
+
+# Admin service
+cd admin-service
+npm install
 npm start
 ```
 
