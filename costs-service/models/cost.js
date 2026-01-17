@@ -31,7 +31,7 @@ const CostSchema = new Schema(
     },
     // The amount of money spent
     sum: {
-      type: Number,
+      type: Schema.Types.Double,
       required: true,
     },
     // The date the expense occurred (defaults to current time)
