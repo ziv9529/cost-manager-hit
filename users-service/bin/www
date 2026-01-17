@@ -10,19 +10,19 @@ const { app, connectDB } = require("../app");
 const debug = require("debug")("user-service:server");
 const http = require("http");
 
-/**
+/*
+ * Helper Function: normalizePort
  * Normalize a port into a number, string, or false.
  */
-
 function normalizePort(val) {
   const port = parseInt(val, 10);
   if (isNaN(port)) {
-    // named pipe
+    // Named pipe
     return val;
   }
 
   if (port >= 0) {
-    // port number
+    // Port number
     return port;
   }
 
@@ -39,7 +39,9 @@ connectDB()
     // Create HTTP server
     const server = http.createServer(app);
 
-    // Event listener for HTTP server "error" event
+    /*
+     * Event listener for HTTP server "listening" event.
+     */
     const onListening = () => {
       const addr = server.address();
       const bind =
@@ -48,10 +50,7 @@ connectDB()
       debug("Listening on " + bind);
     };
 
-    /**
-     * Event listener for HTTP server "error" event.
-     */
-
+    // Event listener for HTTP server "error" event
     const onError = (error) => {
       if (error.syscall !== "listen") {
         throw error;
@@ -59,26 +58,32 @@ connectDB()
 
       const bind = typeof port === "string" ? "Pipe " + port : "Port " + port;
 
-      // handle specific listen errors with friendly messages
+      // Handle specific listen errors with friendly messages
       switch (error.code) {
         case "EACCES":
+           // Permission Denied
           console.error(bind + " requires elevated privileges");
           process.exit(1);
           break;
         case "EADDRINUSE":
+          // Address already in use - port is taken
           console.error(bind + " is already in use");
           process.exit(1);
           break;
         default:
+          // Throw any other unexpected errors
           throw error;
       }
     };
 
+    // Start listening on the provided port
     server.listen(port);
+    // Register the event listeners defined above
     server.on("error", onError);
     server.on("listening", onListening);
   })
   .catch((err) => {
+    // Log any database connection errors and exit immediately
     console.error("Failed to connect to MongoDB:", err);
     process.exit(1);
   });
