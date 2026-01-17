@@ -16,12 +16,6 @@ describe("Costs Service API", () => {
     await connectDB(process.env.MONGODB_URI);
   });
 
-  // Clean database after each test
-  afterEach(async () => {
-    await Cost.deleteMany({});
-    await User.deleteMany({});
-  });
-
   // Close database connection after all tests complete
   afterAll(async () => {
     await mongoose.connection.close();
@@ -31,9 +25,11 @@ describe("Costs Service API", () => {
   describe("POST /api/add", () => {
     // Test successful cost creation with required fields
     test("should create a new cost successfully", async () => {
+      const uniqueId = Date.now();
+
       // Create test user first (required for adding costs)
       await User.create({
-        id: 1,
+        id: uniqueId,
         first_name: "John",
         last_name: "Doe",
         birthday: new Date("1990-05-15"),
@@ -41,8 +37,8 @@ describe("Costs Service API", () => {
 
       // Prepare cost data with required fields
       const costData = {
-        userid: 1,
-        description: "lunch",
+        userid: uniqueId,
+        description: "test_lunch",
         category: "food",
         sum: 25.5,
       };
@@ -52,16 +48,22 @@ describe("Costs Service API", () => {
 
       // Verify response is successful and contains correct data
       expect(response.status).toBe(200);
-      expect(response.body.userid).toBe(1);
-      expect(response.body.description).toBe("lunch");
+      expect(response.body.userid).toBe(uniqueId);
+      expect(response.body.description).toBe("test_lunch");
       expect(response.body.sum).toBe(25.5);
+
+      // Clean up created cost and user
+      await Cost.deleteOne({ userid: uniqueId, description: "test_lunch" });
+      await User.deleteOne({ id: uniqueId });
     });
 
     // Test that missing required fields returns error
     test("should reject cost with missing required fields", async () => {
+      const uniqueId = Date.now() + 1;
+
       // Create test user
       await User.create({
-        id: 2,
+        id: uniqueId,
         first_name: "Jane",
         last_name: "Smith",
         birthday: new Date("1995-03-20"),
@@ -69,8 +71,8 @@ describe("Costs Service API", () => {
 
       // Prepare incomplete cost data
       const costData = {
-        userid: 2,
-        description: "lunch",
+        userid: uniqueId,
+        description: "test_lunch",
         // Missing category and sum
       };
 
@@ -79,6 +81,9 @@ describe("Costs Service API", () => {
 
       // Verify error response for missing parameters
       expect(response.status).toBe(400);
+
+      // Clean up created user (cost shouldn't be created)
+      await User.deleteOne({ id: uniqueId });
     });
   });
 
@@ -86,9 +91,11 @@ describe("Costs Service API", () => {
   describe("GET /api/report", () => {
     // Test monthly report generation for current month
     test("should return monthly report for current month", async () => {
+      const uniqueId = Date.now() + 2;
+
       // Create test user
       await User.create({
-        id: 3,
+        id: uniqueId,
         first_name: "Bob",
         last_name: "Johnson",
         birthday: new Date("1992-07-10"),
@@ -97,8 +104,8 @@ describe("Costs Service API", () => {
       // Create costs for current month
       const today = new Date();
       await Cost.create({
-        userid: 3,
-        description: "lunch",
+        userid: uniqueId,
+        description: "test_lunch",
         category: "food",
         sum: 25.5,
         date: new Date(today.getFullYear(), today.getMonth(), 15),
@@ -106,14 +113,18 @@ describe("Costs Service API", () => {
 
       // Send GET request with query parameters
       const response = await request(app).get(
-        `/api/report?id=3&year=${today.getFullYear()}&month=${
+        `/api/report?id=${uniqueId}&year=${today.getFullYear()}&month=${
           today.getMonth() + 1
-        }`
+        }`,
       );
 
       // Verify report is returned successfully
       expect(response.status).toBe(200);
-      expect(response.body.userid).toBe(3);
+      expect(response.body.userid).toBe(uniqueId);
+
+      // Clean up created cost and user
+      await Cost.deleteOne({ userid: uniqueId, description: "test_lunch" });
+      await User.deleteOne({ id: uniqueId });
     });
 
     // Test report request with missing parameters

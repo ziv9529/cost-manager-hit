@@ -34,10 +34,7 @@ const connectDatabase = async () => {
     await connectDB(process.env.MONGODB_URI);
   } catch (err) {
     // Log the error message if the connection fails
-    console.error(
-      "\x1b[35m[ADMIN-SERVICE]\x1b[0m MongoDB connection error:",
-      err.message
-    );
+    console.error("MongoDB connection error:", err.message);
     // Exit the process with an error code
     process.exit(1);
   }

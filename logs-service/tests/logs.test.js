@@ -6,6 +6,7 @@
 const request = require("supertest");
 const mongoose = require("mongoose");
 const { app, connectDB } = require("../app");
+const Log = require("../models/log");
 
 // Test suite for Logs Service API
 describe("Logs Service API", () => {

@@ -10,10 +10,28 @@ const { app, connectDB } = require("../app");
 const debug = require("debug")("admin-service:server");
 const http = require("http");
 
+/*
+ * Helper Function: normalizePort
+ * Normalize a port into a number, string, or false.
+ */
+function normalizePort(val) {
+  const port = parseInt(val, 10);
+  if (isNaN(port)) {
+    // Named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // Port number
+    return port;
+  }
+
+  return false;
+}
+
 // Connect to MongoDB first to ensure data access before accepting traffic
 connectDB()
   .then(() => {
-
     // Get port from environment and store in Express
     const port = normalizePort(process.env.ADMIN_PORT || "3003");
     app.set("port", port);
@@ -54,11 +72,7 @@ connectDB()
       const addr = server.address();
       const bind =
         typeof addr === "string" ? "pipe " + addr : "port " + addr.port;
-      // Log the running status with color formatting for visibility
-      console.log(
-        `\x1b[1m\x1b[35m[ADMIN-SERVICE]\x1b[0m http://localhost:${addr.port}/ up and running`
-      );
-      // Log the binding to the debug stream
+      console.log(`http://localhost:${addr.port}/ up and running`);
       debug("Listening on " + bind);
     };
 
@@ -73,22 +87,3 @@ connectDB()
     console.error("Failed to connect to MongoDB:", err);
     process.exit(1);
   });
-
-/*
- * Helper Function: normalizePort
- * Normalize a port into a number, string, or false.
- */
-function normalizePort(val) {
-  const port = parseInt(val, 10);
-  if (isNaN(port)) {
-    // Named pipe
-    return val;
-  }
-
-  if (port >= 0) {
-    // Port number
-    return port;
-  }
-
-  return false;
-}

@@ -20,9 +20,10 @@ const logger = pino({
  */
 const saveLogToMongoDB = async (logData) => {
   try {
-    // Only attempt to save if database connection is active
-    if (!mongoose.connection.db) {
-      return; // Database not connected, skip logging
+    const mongoose = require("mongoose");
+    // Only attempt to save if database connection is active and ready
+    if (!mongoose.connection.db || mongoose.connection.readyState !== 1) {
+      return; // Database not connected or not ready, skip logging
     }
 
     await Log.create({
@@ -34,10 +35,11 @@ const saveLogToMongoDB = async (logData) => {
     });
   } catch (error) {
     // Silently handle logging errors to prevent test suite interruption
-    // Only log if it's not a connection error
+    // Only log if it's not a connection or session error
     if (
       !error.message.includes("closed connection") &&
-      !error.message.includes("connection")
+      !error.message.includes("connection") &&
+      !error.message.includes("session that has ended")
     ) {
       console.error("Error saving log to MongoDB:", error.message);
     }

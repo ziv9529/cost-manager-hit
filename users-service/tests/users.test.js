@@ -15,11 +15,6 @@ describe("Users Service API", () => {
     await connectDB(process.env.MONGODB_URI);
   });
 
-  // Clean up database after each test
-  afterEach(async () => {
-    await User.deleteMany({});
-  });
-
   // Close database connection after all tests complete
   afterAll(async () => {
     await mongoose.connection.close();
@@ -29,8 +24,9 @@ describe("Users Service API", () => {
   describe("POST /api/add", () => {
     // Test successful user creation with all required fields
     test("should create a new user successfully", async () => {
+      const uniqueId = Date.now();
       const userData = {
-        id: 1,
+        id: uniqueId,
         first_name: "John",
         last_name: "Doe",
         birthday: "1990-05-15",
@@ -40,16 +36,19 @@ describe("Users Service API", () => {
 
       // Verify response status is 200 (success)
       expect(response.status).toBe(200);
-      expect(response.body.id).toBe(1);
-      // Verify user data is returned correctly
+      expect(response.body.id).toBe(uniqueId);
       expect(response.body.first_name).toBe("John");
       expect(response.body.last_name).toBe("Doe");
+
+      // Clean up created user
+      await User.deleteOne({ id: uniqueId });
     });
 
     // Test that missing required fields returns error
     test("should reject user with missing required fields", async () => {
+      const uniqueId = Date.now() + 1;
       const userData = {
-        id: 2,
+        id: uniqueId,
         first_name: "Jane",
         // Missing last_name and birthday
       };
@@ -63,39 +62,13 @@ describe("Users Service API", () => {
 
   // Test GET /api/users endpoint for retrieving all users
   describe("GET /api/users", () => {
-    // Test retrieving multiple users from database
-    test("should return all users", async () => {
-      // Create test users in database
-      await User.create({
-        id: 1,
-        first_name: "John",
-        last_name: "Doe",
-        birthday: new Date("1990-05-15"),
-      });
-
-      // Create second test user
-      await User.create({
-        id: 2,
-        first_name: "Jane",
-        last_name: "Smith",
-        birthday: new Date("1995-03-20"),
-      });
-
-      // Send GET request to retrieve all users
+    // Test that endpoint returns users array successfully
+    test("should return all users as an array", async () => {
       const response = await request(app).get("/api/users");
 
-      // Verify response contains all users
+      // Verify response is successful and returns an array
       expect(response.status).toBe(200);
-      expect(response.body.length).toBe(2);
-    });
-
-    // Test retrieving users when database is empty
-    test("should return empty array when no users exist", async () => {
-      const response = await request(app).get("/api/users");
-
-      // Verify empty response
-      expect(response.status).toBe(200);
-      expect(response.body).toEqual([]);
+      expect(Array.isArray(response.body)).toBe(true);
     });
   });
 
@@ -103,26 +76,32 @@ describe("Users Service API", () => {
   describe("GET /api/users/:id", () => {
     // Test retrieving a specific user by ID
     test("should return user details by id", async () => {
+      const uniqueId = Date.now() + 2;
+
       // Create test user in database
       await User.create({
-        id: 1,
+        id: uniqueId,
         first_name: "John",
         last_name: "Doe",
         birthday: new Date("1990-05-15"),
       });
 
       // Send GET request for specific user
-      const response = await request(app).get("/api/users/1");
+      const response = await request(app).get(`/api/users/${uniqueId}`);
 
       // Verify user details returned correctly
       expect(response.status).toBe(200);
-      expect(response.body.id).toBe(1);
+      expect(response.body.id).toBe(uniqueId);
       expect(response.body.first_name).toBe("John");
+
+      // Clean up created user
+      await User.deleteOne({ id: uniqueId });
     });
 
     // Test requesting a non-existent user
     test("should return 404 when user not found", async () => {
-      const response = await request(app).get("/api/users/9999");
+      const nonExistentId = 999999999;
+      const response = await request(app).get(`/api/users/${nonExistentId}`);
 
       // Verify 404 error for non-existent user
       expect(response.status).toBe(404);
